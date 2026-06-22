@@ -2834,21 +2834,8 @@ async function sbSelect(table){
   }catch(e){console.warn('Supabase read error:',e);return[];}
 }
 
-async function sbUpsert(table, item){
+async function sbUpsertRaw(table, id, data){
   try{
-    // Strip large photo data for non-post tables, strip GPX for posts if too large
-    let payload=item;
-    if(table==='posts'){
-      // Estimate size
-      const json=JSON.stringify(item);
-      if(json.length > 800000){
-        // Too large - strip GPX data from tracks (keep stats only)
-        payload={...item, tracks:(item.tracks||[]).map(t=>({
-          ...t, gpx:undefined
-        }))};
-        console.warn('Post too large, stripping GPX for Supabase');
-      }
-    }
     const r=await fetch(`${SB_URL}/rest/v1/${table}`,{
       method:'POST',
       headers:{
@@ -2857,15 +2844,32 @@ async function sbUpsert(table, item){
         'Content-Type':'application/json',
         'Prefer':'resolution=merge-duplicates,return=minimal'
       },
-      body:JSON.stringify({id:payload.id, data:payload})
+      body:JSON.stringify({id, data})
     });
     if(!r.ok){
-      let err='';
-      try{err=await r.text();}catch(e){}
+      let err=''; try{err=await r.text();}catch(e){}
       console.warn('Supabase upsert error:',table,r.status,err);
     }
     return r.ok;
   }catch(e){console.warn('Supabase write error:',e);return false;}
+}
+
+async function sbUpsert(table, item){
+  if(table==='posts'){
+    // Save GPX strings separately, strip from post payload
+    const tracks=(item.tracks||[]);
+    const hasGpx=tracks.some(t=>t.gpx);
+    if(hasGpx){
+      // Save each track's GPX to gpx table
+      for(const t of tracks){
+        if(t.gpx) await sbUpsertRaw('gpx', item.id+'_'+t.id, {postId:item.id, trackId:t.id, gpx:t.gpx});
+      }
+    }
+    // Save post without raw GPX strings
+    const payload={...item, tracks:tracks.map(t=>({...t, gpx:undefined}))};
+    return sbUpsertRaw('posts', payload.id, payload);
+  }
+  return sbUpsertRaw(table, item.id, item);
 }
 
 async function sbDelete(table, id){
@@ -2962,16 +2966,28 @@ async function sbSelectSummary(){
 async function loadFullPost(id){
   if(fullPostCache[id]) return fullPostCache[id];
   try{
-    const r=await fetch(`${SB_URL}/rest/v1/posts?id=eq.${encodeURIComponent(id)}&select=*`,{
-      headers:{...sbHeaders(),'Cache-Control':'no-cache'}
-    });
-    if(!r.ok) return null;
-    const rows=await r.json();
+    // Load post and GPX in parallel
+    const [postRes, gpxRes]=await Promise.all([
+      fetch(`${SB_URL}/rest/v1/posts?id=eq.${encodeURIComponent(id)}&select=*`,{
+        headers:{...sbHeaders(),'Cache-Control':'no-cache'}
+      }),
+      fetch(`${SB_URL}/rest/v1/gpx?data->postId=eq.${encodeURIComponent(id)}&select=*`,{
+        headers:{...sbHeaders(),'Cache-Control':'no-cache'}
+      })
+    ]);
+    if(!postRes.ok) return null;
+    const rows=await postRes.json();
     if(!rows.length) return null;
     const full=rows[0].data;
+    // Merge GPX back into tracks
+    if(gpxRes.ok){
+      const gpxRows=await gpxRes.json();
+      const gpxMap={};
+      gpxRows.forEach(r=>{gpxMap[r.data.trackId]=r.data.gpx});
+      full.tracks=(full.tracks||[]).map(t=>({...t, gpx:gpxMap[t.id]||t.gpx}));
+    }
     full._isFullyLoaded=true;
     fullPostCache[id]=full;
-    // Update in posts array too
     const idx=posts.findIndex(p=>p.id===id);
     if(idx>-1) posts[idx]=full;
     return full;
@@ -3759,15 +3775,19 @@ async function sp(){
 async function dp2(id){
   if(!confirm('Post verwijderen?')) return;
   posts=posts.filter(p=>p.id!==id);
+  delete fullPostCache[id];
   await dde('posts',id);
   if(isLoggedIn){
     const ok=await sbDelete('posts',id);
-    console.log('Supabase delete result:', ok);
+    // Also delete GPX entries for this post
+    fetch(`${SB_URL}/rest/v1/gpx?data->postId=eq.${encodeURIComponent(id)}`,{
+      method:'DELETE',
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
+    }).catch(()=>{});
     if(!ok) toast('⚠ Supabase delete mislukt — klik ☁ om te synchroniseren');
   }
   ex.delete(id);
   rf();
-  if(isLoggedIn) syncAllToSupabase();
   toast('Post verwijderd');
   refreshSidebar();
 }

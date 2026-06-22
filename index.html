@@ -865,7 +865,7 @@ body:not(.readonly) .logout-btn{display:flex}
     <button class="btn btn-ghost" onclick="sv('vacations')">🏖 Vakanties</button>
     <button class="btn btn-primary edit-only" onclick="showEd()">+ New Post</button>
     <button class="btn btn-ghost login-btn" onclick="showLogin()">🔒 Inloggen</button>
-    <button class="btn btn-ghost logout-btn edit-only" onclick="syncToGitHub()" title="Opslaan op GitHub">☁</button>
+    <button class="btn btn-ghost logout-btn edit-only" onclick="syncAllToSupabase()" title="Synchroniseer met cloud">☁</button>
     <button class="btn btn-ghost logout-btn" onclick="doLogout()" title="Uitloggen">🔓</button>
     <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(this)">
     <div class="gear-wrap" id="gear-wrap">
@@ -1996,6 +1996,7 @@ async function addPerson(){
   if(prev){prev.innerHTML='+';prev.style.background='#ccc';}
   document.getElementById('new-person-photo').value='';
   renderPersonsManager();
+  syncAllToSupabase();
   toast(`${name} toegevoegd`);
 }
 
@@ -2660,79 +2661,77 @@ const CONN_TYPES={
   plane:{label:'✈ Vliegtuig',color:'#16a085',dash:'5,4'}
 };
 
-/* SYNC — wordt ingesteld met Supabase */
-const GH_USER='';const GH_REPO='';const GH_FILE='';
-function ghToken(){return null;}
+/* SUPABASE SYNC */
+const SB_URL='https://kwqkheuozjlddpguxtha.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3cWtoZXVvempsZGRwZ3V4dGhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMTg1NDMsImV4cCI6MjA5NzY5NDU0M30.XdySeXADbKkEqZWEW_IagK17Sk1wLD5FC77_fY3UgPY';
 
-async function ghGet(){
-  try{
-    const r=await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`,{
-      headers:{'Accept':'application/vnd.github.v3+json'}
-    });
-    if(r.status===404) return null; // file doesn't exist yet
-    if(!r.ok) throw new Error('GitHub fetch failed: '+r.status);
-    const d=await r.json();
-    const decoded=atob(d.content.replace(/\n/g,''));
-    return{data:JSON.parse(decoded), sha:d.sha};
-  }catch(e){
-    console.warn('GitHub load failed:',e);
-    return null;
-  }
+function sbHeaders(write=false){
+  const h={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
+  if(write) h['Prefer']='resolution=merge-duplicates';
+  return h;
 }
 
-async function ghPush(data){
-  const token=ghToken();
-  if(!token) return false;
+async function sbSelect(table){
   try{
-    // Get current SHA first
-    const current=await ghGet();
-    const body={
-      message:'Trailhead update '+new Date().toISOString().slice(0,16),
-      content:btoa(unescape(encodeURIComponent(JSON.stringify(data)))),
-      sha: current?.sha
-    };
-    if(!body.sha) delete body.sha; // new file
-    const r=await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`,{
-      method:'PUT',
-      headers:{
-        'Authorization':'token '+token,
-        'Content-Type':'application/json',
-        'Accept':'application/vnd.github.v3+json'
-      },
-      body:JSON.stringify(body)
+    const r=await fetch(`${SB_URL}/rest/v1/${table}?select=*`,{headers:sbHeaders()});
+    if(!r.ok) return [];
+    const rows=await r.json();
+    return rows.map(row=>row.data);
+  }catch(e){console.warn('Supabase read error:',e);return[];}
+}
+
+async function sbUpsert(table, item){
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/${table}`,{
+      method:'POST',
+      headers:{...sbHeaders(true),'Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify({id:item.id, data:item})
     });
     return r.ok;
-  }catch(e){
-    console.warn('GitHub push failed:',e);
+  }catch(e){console.warn('Supabase write error:',e);return false;}
+}
+
+async function sbDelete(table, id){
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`,{
+      method:'DELETE',
+      headers:sbHeaders()
+    });
+    return r.ok;
+  }catch(e){console.warn('Supabase delete error:',e);return false;}
+}
+
+async function loadFromSupabase(){
+  try{
+    const [p,g,pe,v]=await Promise.all([
+      sbSelect('posts'),sbSelect('groups'),sbSelect('persons'),sbSelect('vacations')
+    ]);
+    if(p.length||g.length||pe.length||v.length){
+      posts=p; groups=g; persons=pe; vacations=v;
+      return true;
+    }
     return false;
-  }
+  }catch(e){console.warn('Supabase load failed:',e);return false;}
 }
 
-async function syncToGitHub(){
+async function syncAllToSupabase(){
   if(!isLoggedIn) return;
-  const data={posts,groups,persons,vacations,version:1};
-  const ok=await ghPush(data);
-  if(ok) toast('☁ Opgeslagen op GitHub');
-  else toast('⚠ GitHub sync mislukt');
+  try{
+    await Promise.all([
+      ...posts.map(p=>sbUpsert('posts',p)),
+      ...groups.map(g=>sbUpsert('groups',g)),
+      ...persons.map(p=>sbUpsert('persons',p)),
+      ...vacations.map(v=>sbUpsert('vacations',v))
+    ]);
+    toast('☁ Gesynchroniseerd');
+  }catch(e){toast('⚠ Sync mislukt');}
 }
 
-async function loadFromGitHub(){
-  // Always try to load from GitHub first (public read)
-  const result=await ghGet();
-  if(!result) return false;
-  const data=result.data;
-  // Merge into local state
-  if(data.posts) posts=data.posts;
-  if(data.groups) groups=data.groups;
-  if(data.persons) persons=data.persons||[];
-  if(data.vacations) vacations=data.vacations||[];
-  // Also save to local IndexedDB as cache
-  for(const p of posts) await dpu('posts',p);
-  for(const g of groups) await dpu('groups',g);
-  for(const p of persons) await dpu('persons',p);
-  for(const v of vacations) await dpu('vacations',v);
-  return true;
-}
+
+
+
+
+
 
 /* AUTHENTICATIE */
 const PWD_HASH='dbfc0b038145c322ad4a02825321d52ec535bda9fc290aa5afa208679281244b';
@@ -3036,6 +3035,7 @@ async function saveVacation(){
   await dpu('vacations',v);
   closeVacationEditor();
   toast(`✓ "${title}" opgeslagen`);
+  syncAllToSupabase();
   renderVacations();
   // Stay on detail page if that's where we were
   if(wasOnDetail&&prevVacId){
@@ -3078,9 +3078,9 @@ async function deleteCurrentVacation(){
 
 async function boot(){
   await odb();await migrate();
-  // Try GitHub first, fall back to local IndexedDB
-  const fromGH=await loadFromGitHub();
-  if(!fromGH){
+  // Try Supabase first, fall back to local IndexedDB
+  const fromSB=await loadFromSupabase();
+  if(!fromSB){
     posts=await dga('posts');
     groups=await dga('groups');
     await loadPersons();
@@ -3353,7 +3353,7 @@ async function sp(){
   const planned=document.getElementById('f-planned').checked;
   const p={id:eid||Date.now().toString(),title,body:document.getElementById('fb').value.trim(),category:cat,planned,groups:finalGroups,date:eid?(posts.find(x=>x.id===eid)||{}).date||Date.now():Date.now(),tracks:ctr,connections:currentConns,pois:currentPois,persons:currentPersons,scores:currentScores,photos:cph,pins:cpn,bannerIndex:cbi,infoBlocks:cib.filter(b=>{if(b.type==='timeline')return b.title.trim()||(b.tlNotes||[]).length;return b.title.trim()||(Array.isArray(b.content)?b.content.some(i=>i.trim()):b.content?.trim())})};
   if(eid){const i=posts.findIndex(x=>x.id===eid);if(i>-1)posts[i]=p}else posts.push(p);
-  await dpu('posts',p);toast('Post opgeslagen!');syncToGitHub();
+  await dpu('posts',p);toast('Post opgeslagen!');syncAllToSupabase();
   if(planned){
     sv('feed');
     sft('plan');

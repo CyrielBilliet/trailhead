@@ -2660,16 +2660,9 @@ const CONN_TYPES={
   plane:{label:'✈ Vliegtuig',color:'#16a085',dash:'5,4'}
 };
 
-/* GITHUB SYNC */
-const GH_USER='CyrielBilliet';
-const GH_REPO='trailhead';
-const GH_FILE='data.json';
-const GH_TOKEN_KEY='trailhead-gh-token'; // stored in sessionStorage after login
-
-function ghToken(){
-  // Token only available when logged in
-  return isLoggedIn ? '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' : null;
-}
+/* SYNC — wordt ingesteld met Supabase */
+const GH_USER='';const GH_REPO='';const GH_FILE='';
+function ghToken(){return null;}
 
 async function ghGet(){
   try{

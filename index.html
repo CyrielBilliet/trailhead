@@ -2911,8 +2911,8 @@ async function sbUpsert(table, item){
     }
     // Save post without raw GPX, downsampled coords, and photos stored separately
     const bannerIdx=item.bannerIndex||0;
-    const bannerPhoto=item.photos&&item.photos.length?[item.photos[Math.min(bannerIdx,item.photos.length-1)]]:[];
-    // Compress banner photo further if needed
+    const rawBanner=item.photos&&item.photos.length?item.photos[Math.min(bannerIdx,item.photos.length-1)]:null;
+    const bannerPhoto=rawBanner?[await compressForCloud(rawBanner)]:[];
     const payload={
       id:item.id,
       title:item.title,
@@ -2924,7 +2924,10 @@ async function sbUpsert(table, item){
       planned:item.planned||false,
       bannerIndex:bannerIdx,
       body:item.body||'',
-      pois:item.pois||[],
+      pois:(item.pois||[]).map(poi=>{
+        const {_photos, _photoCached, ...cleanPoi}=poi;
+        return cleanPoi;
+      }),
       connections:item.connections||[],
       infoBlocks:item.infoBlocks||[],
       pins:item.pins||{},

@@ -2950,6 +2950,14 @@ async function sbUpsert(table, item){
         await sbUpsertRaw('photos', item.id+'_'+i, {postId:item.id, chunkIdx:i, photos:chunk});
       }
     }
+    const _dbg=JSON.stringify(payload);
+    console.log('POST SIZE:',Math.round(_dbg.length/1024),'KB');
+    console.log('- body:',Math.round(JSON.stringify(payload.body||'').length/1024),'KB');
+    console.log('- photos:',Math.round(JSON.stringify(payload.photos||[]).length/1024),'KB');
+    console.log('- tracks:',Math.round(JSON.stringify(payload.tracks||[]).length/1024),'KB');
+    console.log('- pois:',Math.round(JSON.stringify(payload.pois||[]).length/1024),'KB');
+    console.log('- connections:',Math.round(JSON.stringify(payload.connections||[]).length/1024),'KB');
+    console.log('- infoBlocks:',Math.round(JSON.stringify(payload.infoBlocks||[]).length/1024),'KB');
     return sbUpsertRaw('posts', payload.id, payload);
   }
   return sbUpsertRaw(table, item.id, item);

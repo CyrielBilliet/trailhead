@@ -827,6 +827,30 @@ nav{background:var(--nav-bg);border-bottom:3px solid var(--nav-border);padding:0
 .post-picker-info{flex:1;min-width:0}
 .post-picker-title{font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--body)}
 .post-picker-meta{font-size:11px;color:var(--muted);font-family:var(--sans)}
+
+/* ═══════════════════════════════════════
+   AUTHENTICATIE
+═══════════════════════════════════════ */
+#auth-overlay{display:none;position:fixed;inset:0;background:var(--nav-bg);z-index:9000;align-items:center;justify-content:center;flex-direction:column;gap:1.5rem}
+#auth-overlay.open{display:flex}
+.auth-box{background:var(--surface);border-radius:12px;padding:2rem;width:90vw;max-width:380px;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+.auth-logo{font-family:var(--serif);font-size:28px;color:var(--nav-text);text-align:center;margin-bottom:1.5rem}
+.auth-box input{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius);font-size:15px;font-family:var(--sans);background:var(--input-bg);color:var(--ink);outline:none;margin-bottom:.75rem}
+.auth-box input:focus{border-color:var(--moss)}
+.auth-error{color:#e05050;font-size:13px;font-family:var(--sans);text-align:center;min-height:20px}
+.auth-hint{font-size:12px;color:var(--muted);font-family:var(--sans);text-align:center;margin-top:.5rem}
+/* Hide edit controls when not logged in */
+body.readonly .edit-only{display:none!important}
+body.readonly .btn-primary{display:none!important}
+body.readonly .gear-btn{display:none!important}
+body.readonly .hamburger{pointer-events:none}
+/* Show login button in nav when readonly */
+.login-btn{display:none}
+body.readonly .login-btn{display:flex}
+body:not(.readonly) .login-btn{display:none}
+/* Logout button only when logged in */
+.logout-btn{display:none}
+body:not(.readonly) .logout-btn{display:flex}
 </style>
 </head>
 <body>
@@ -839,7 +863,10 @@ nav{background:var(--nav-bg);border-bottom:3px solid var(--nav-border);padding:0
   <div class="nav-desktop" style="display:flex;gap:8px;align-items:center">
     <button class="btn btn-ghost" onclick="sv('feed')">📋 Posts</button>
     <button class="btn btn-ghost" onclick="sv('vacations')">🏖 Vakanties</button>
-    <button class="btn btn-primary" onclick="showEd()">+ New Post</button>
+    <button class="btn btn-primary edit-only" onclick="showEd()">+ New Post</button>
+    <button class="btn btn-ghost login-btn" onclick="showLogin()">🔒 Inloggen</button>
+    <button class="btn btn-ghost logout-btn edit-only" onclick="syncToGitHub()" title="Opslaan op GitHub">☁</button>
+    <button class="btn btn-ghost logout-btn" onclick="doLogout()" title="Uitloggen">🔓</button>
     <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(this)">
     <div class="gear-wrap" id="gear-wrap">
       <button class="gear-btn" onclick="toggleGear()" title="Instellingen">⚙</button>
@@ -861,7 +888,7 @@ nav{background:var(--nav-bg);border-bottom:3px solid var(--nav-border);padding:0
 <div class="nav-drawer" id="nav-drawer">
   <button class="btn" onclick="sv('feed');closeDrawer()">📋 Posts</button>
   <button class="btn" onclick="sv('vacations');closeDrawer()">🏖 Vakanties</button>
-  <button class="btn btn-primary" onclick="showEd();closeDrawer()">+ New Post</button>
+  <button class="btn btn-primary edit-only" onclick="showEd();closeDrawer()">+ New Post</button>
   <div class="gear-sep" style="height:1px;background:rgba(255,255,255,.1);margin:2px 0"></div>
   <button class="btn" onclick="sv('groups');closeDrawer()">🗂 Groups beheren</button>
   <button class="btn" onclick="sv('persons');closeDrawer()">👥 Personen beheren</button>
@@ -2601,9 +2628,9 @@ function renderPlanner(){
           ${he?`<div class="pe"><canvas id="rb-${p.id}"></canvas></div><div class="prl"><span id="rmn-${p.id}"></span><span id="rmx-${p.id}"></span></div>`:''}
         </div>
         <div class="pca" onclick="event.stopPropagation()">
-          <button class="btn btn-sm btn-execute" onclick="executePost('${p.id}')">✓ Markeer als uitgevoerd</button>
-          <button class="btn btn-sm" onclick="ep('${p.id}')">✏️ Bewerken</button>
-          <button class="btn btn-sm btn-danger" onclick="dp2('${p.id}')">🗑 Verwijderen</button>
+          <button class="btn btn-sm btn-execute edit-only" onclick="executePost('${p.id}')">✓ Markeer als uitgevoerd</button>
+          <button class="btn btn-sm edit-only" onclick="ep('${p.id}')">✏️ Bewerken</button>
+          <button class="btn btn-sm btn-danger edit-only" onclick="dp2('${p.id}')">🗑 Verwijderen</button>
         </div>
       </div>
     </div>`;
@@ -2632,6 +2659,145 @@ const CONN_TYPES={
   car:  {label:'🚗 Auto',   color:'#8e44ad',dash:'6,5'},
   plane:{label:'✈ Vliegtuig',color:'#16a085',dash:'5,4'}
 };
+
+/* GITHUB SYNC */
+const GH_USER='CyrielBilliet';
+const GH_REPO='trailhead';
+const GH_FILE='data.json';
+const GH_TOKEN_KEY='trailhead-gh-token'; // stored in sessionStorage after login
+
+function ghToken(){
+  // Token only available when logged in
+  return isLoggedIn ? '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' : null;
+}
+
+async function ghGet(){
+  try{
+    const r=await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`,{
+      headers:{'Accept':'application/vnd.github.v3+json'}
+    });
+    if(r.status===404) return null; // file doesn't exist yet
+    if(!r.ok) throw new Error('GitHub fetch failed: '+r.status);
+    const d=await r.json();
+    const decoded=atob(d.content.replace(/\n/g,''));
+    return{data:JSON.parse(decoded), sha:d.sha};
+  }catch(e){
+    console.warn('GitHub load failed:',e);
+    return null;
+  }
+}
+
+async function ghPush(data){
+  const token=ghToken();
+  if(!token) return false;
+  try{
+    // Get current SHA first
+    const current=await ghGet();
+    const body={
+      message:'Trailhead update '+new Date().toISOString().slice(0,16),
+      content:btoa(unescape(encodeURIComponent(JSON.stringify(data)))),
+      sha: current?.sha
+    };
+    if(!body.sha) delete body.sha; // new file
+    const r=await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`,{
+      method:'PUT',
+      headers:{
+        'Authorization':'token '+token,
+        'Content-Type':'application/json',
+        'Accept':'application/vnd.github.v3+json'
+      },
+      body:JSON.stringify(body)
+    });
+    return r.ok;
+  }catch(e){
+    console.warn('GitHub push failed:',e);
+    return false;
+  }
+}
+
+async function syncToGitHub(){
+  if(!isLoggedIn) return;
+  const data={posts,groups,persons,vacations,version:1};
+  const ok=await ghPush(data);
+  if(ok) toast('☁ Opgeslagen op GitHub');
+  else toast('⚠ GitHub sync mislukt');
+}
+
+async function loadFromGitHub(){
+  // Always try to load from GitHub first (public read)
+  const result=await ghGet();
+  if(!result) return false;
+  const data=result.data;
+  // Merge into local state
+  if(data.posts) posts=data.posts;
+  if(data.groups) groups=data.groups;
+  if(data.persons) persons=data.persons||[];
+  if(data.vacations) vacations=data.vacations||[];
+  // Also save to local IndexedDB as cache
+  for(const p of posts) await dpu('posts',p);
+  for(const g of groups) await dpu('groups',g);
+  for(const p of persons) await dpu('persons',p);
+  for(const v of vacations) await dpu('vacations',v);
+  return true;
+}
+
+/* AUTHENTICATIE */
+const PWD_HASH='dbfc0b038145c322ad4a02825321d52ec535bda9fc290aa5afa208679281244b';
+let isLoggedIn=false;
+
+async function hashPassword(pwd){
+  const buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pwd));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+function showLogin(){
+  document.getElementById('auth-overlay').classList.add('open');
+  document.getElementById('auth-input').value='';
+  document.getElementById('auth-error').textContent='';
+  setTimeout(()=>document.getElementById('auth-input').focus(),100);
+}
+
+async function tryLogin(){
+  const pwd=document.getElementById('auth-input').value;
+  if(!pwd) return;
+  const hash=await hashPassword(pwd);
+  if(hash===PWD_HASH){
+    isLoggedIn=true;
+    sessionStorage.setItem('trailhead-auth','1');
+    document.body.classList.remove('readonly');
+    document.getElementById('auth-overlay').classList.remove('open');
+    document.getElementById('auth-error').textContent='';
+    toast('✓ Ingelogd');
+  } else {
+    document.getElementById('auth-error').textContent='Verkeerd wachtwoord';
+    document.getElementById('auth-input').value='';
+    document.getElementById('auth-input').focus();
+  }
+}
+
+function enterReadonly(){
+  document.getElementById('auth-overlay').classList.remove('open');
+  document.body.classList.add('readonly');
+  isLoggedIn=false;
+}
+
+function doLogout(){
+  isLoggedIn=false;
+  sessionStorage.removeItem('trailhead-auth');
+  document.body.classList.add('readonly');
+  toast('Uitgelogd');
+}
+
+function checkAuth(){
+  // Check if already logged in this session
+  if(sessionStorage.getItem('trailhead-auth')==='1'){
+    isLoggedIn=true;
+    document.body.classList.remove('readonly');
+  } else {
+    // Just set readonly - no overlay, visitor can browse freely
+    document.body.classList.add('readonly');
+  }
+}
 
 /* VAKANTIES */
 let vacations=[]; // [{id, title, desc, from, to, photo, postIds:[]}]
@@ -2917,7 +3083,19 @@ async function deleteCurrentVacation(){
 
 /* PLANNER */
 
-async function boot(){await odb();await migrate();posts=await dga('posts');groups=await dga('groups');await loadPersons();await loadVacations();document.getElementById('ls').style.display='none';rfb();rf()}
+async function boot(){
+  await odb();await migrate();
+  // Try GitHub first, fall back to local IndexedDB
+  const fromGH=await loadFromGitHub();
+  if(!fromGH){
+    posts=await dga('posts');
+    groups=await dga('groups');
+    await loadPersons();
+    await loadVacations();
+  }
+  document.getElementById('ls').style.display='none';
+  rfb();rf();
+}
 function sv(n){closeDrawer();document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.getElementById('view-'+n).classList.add('active');if(n==='feed'){rfb();rf();if(cft==='map')rom()}if(n==='groups')rgm();if(n==='persons')renderPersonsManager();if(n==='vacations')renderVacations();if(n==='vacation-detail'){}if(n==='post')ivm()}
 function sft(n){
   cft=n;
@@ -3032,8 +3210,8 @@ function rf(){
           <div class="ph2">Klik om de volledige post te openen →</div>
         </div>
         <div class="pca" onclick="event.stopPropagation()">
-          <button class="btn btn-sm" onclick="ep('${p.id}')">✏️ Bewerken</button>
-          <button class="btn btn-sm btn-danger" onclick="dp2('${p.id}')">🗑 Verwijderen</button>
+          <button class="btn btn-sm edit-only" onclick="ep('${p.id}')">✏️ Bewerken</button>
+          <button class="btn btn-sm btn-danger edit-only" onclick="dp2('${p.id}')">🗑 Verwijderen</button>
         </div>
       </div>
     </div>`;
@@ -3182,7 +3360,7 @@ async function sp(){
   const planned=document.getElementById('f-planned').checked;
   const p={id:eid||Date.now().toString(),title,body:document.getElementById('fb').value.trim(),category:cat,planned,groups:finalGroups,date:eid?(posts.find(x=>x.id===eid)||{}).date||Date.now():Date.now(),tracks:ctr,connections:currentConns,pois:currentPois,persons:currentPersons,scores:currentScores,photos:cph,pins:cpn,bannerIndex:cbi,infoBlocks:cib.filter(b=>{if(b.type==='timeline')return b.title.trim()||(b.tlNotes||[]).length;return b.title.trim()||(Array.isArray(b.content)?b.content.some(i=>i.trim()):b.content?.trim())})};
   if(eid){const i=posts.findIndex(x=>x.id===eid);if(i>-1)posts[i]=p}else posts.push(p);
-  await dpu('posts',p);toast('Post opgeslagen!');
+  await dpu('posts',p);toast('Post opgeslagen!');syncToGitHub();
   if(planned){
     sv('feed');
     sft('plan');
@@ -3520,7 +3698,7 @@ function vp(id){
   else ibv.innerHTML=`<div class="nib">Geen info blokken toegevoegd.</div>`;
   // Show execute button if planned
   const execBtn=document.getElementById('pv-execute-btn');
-  if(execBtn) execBtn.innerHTML=p.planned?`<button class="btn btn-sm btn-execute" onclick="executePost('${p.id}')">✓ Markeer als uitgevoerd</button>`:'';
+  if(execBtn) execBtn.innerHTML=p.planned?`<button class="btn btn-sm btn-execute edit-only" onclick="executePost('${p.id}')">✓ Markeer als uitgevoerd</button>`:'';
   initPostSidebar(p);spt('story');sv('post');
 }
 function rtlv(b){const cfg=b.tlConfig||{};const notes=(b.tlNotes||[]).slice().sort((a,z)=>(a.timeFrom||'').localeCompare(z.timeFrom||''));const sd=cfg.startDate,ed=cfg.endDate||sd;let rs='';if(sd){const s=fds(sd);rs=ed&&ed!==sd?`${s} → ${fds(ed)}`:s;if(cfg.startTime)rs+=` · ${cfg.startTime}`;if(cfg.endTime)rs+=` → ${cfg.endTime}`}let h=`<div class="tlv">`;if(rs)h+=`<div class="tlrh"><span class="tlrb">📅 ${esc(rs)}</span></div>`;h+=`<div class="tlsp">`;notes.forEach(n=>{const sp=n.type==='span';const tl=sp&&n.timeTo?`${n.timeFrom||'?'} → ${n.timeTo}`:(n.timeFrom||'');h+=`<div class="tli"><div class="tldt ${sp?'sp':''}"></div><div class="tlii ${sp?'sp':''}">
@@ -3600,7 +3778,7 @@ function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace
 function fd(ts){return new Date(ts).toLocaleDateString('nl-BE',{day:'numeric',month:'long',year:'numeric'})}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
 window.addEventListener('resize',()=>{if(vm)vm.invalidateSize();if(em)em.invalidateSize();if(om)om.invalidateSize();if(sidebarMap)sidebarMap.invalidateSize();});
-if(typeof L!=="undefined"){boot();}else{window.addEventListener("load",boot);}
+if(typeof L!=="undefined"){boot().then(checkAuth);}else{window.addEventListener("load",()=>boot().then(checkAuth));}
 </script>
 
 <!-- FULLSCREEN MAP OVERLAY -->
@@ -3617,6 +3795,19 @@ if(typeof L!=="undefined"){boot();}else{window.addEventListener("load",boot);}
     </div>
   </div>
   <div id="map-fs-map"></div>
+</div>
+<!-- AUTH OVERLAY -->
+<div id="auth-overlay">
+  <div style="font-family:'Playfair Display',serif;font-size:32px;color:#f0e8dc;display:flex;align-items:center;gap:12px">
+    <div style="width:36px;height:36px;background:#9c5a2d;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center"><span style="transform:rotate(45deg);font-size:18px">▲</span></div>
+    Trail<span style="color:#d9cebc">head</span>
+  </div>
+  <div class="auth-box">
+    <input type="password" id="auth-input" placeholder="Wachtwoord…" onkeydown="if(event.key==='Enter')tryLogin()">
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px" onclick="tryLogin()">Inloggen</button>
+    <div class="auth-error" id="auth-error"></div>
+    <div class="auth-hint">Of <a href="#" onclick="enterReadonly()" style="color:var(--moss)">bekijk als bezoeker</a></div>
+  </div>
 </div>
 </body>
 </html>

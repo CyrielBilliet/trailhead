@@ -2999,11 +2999,13 @@ async function loadFromSupabase(){
     const [p,g,pe,v]=await Promise.all([
       sbSelectSummary(),sbSelect('groups'),sbSelect('persons'),sbSelect('vacations')
     ]);
-    if(p.length||g.length||pe.length||v.length){
+    // Only sync if Supabase actually returned posts (avoid wiping local data on error)
+    if(p.length){
       posts=p; groups=g; persons=pe; vacations=v;
       await syncIDBFromSupabase();
       return true;
     }
+    // If no posts in Supabase but local has posts, keep local
     return false;
   }catch(e){console.warn('Supabase load failed:',e);return false;}
 }
@@ -3016,12 +3018,14 @@ async function syncIDBFromSupabase(){
       // Get all local IDs
       const localItems=await dga(store);
       const remoteIds=new Set(arr.map(x=>x.id));
-      // Delete items that no longer exist in Supabase
-      for(const item of localItems){
-        if(!remoteIds.has(item.id)) await new Promise((r)=>{
-          const t=db.transaction(store,'readwrite');
-          t.objectStore(store).delete(item.id).onsuccess=r;
-        });
+      // Only delete local items if Supabase has data (avoid accidental wipe)
+      if(remoteIds.size>0){
+        for(const item of localItems){
+          if(!remoteIds.has(item.id)) await new Promise((r)=>{
+            const t=db.transaction(store,'readwrite');
+            t.objectStore(store).delete(item.id).onsuccess=r;
+          });
+        }
       }
       // Upsert all Supabase items to local
       for(const item of arr) await dpu(store,item);
@@ -3465,7 +3469,7 @@ async function boot(){
     await loadPersons();
     await loadVacations();
   }
-  document.getElementById('ls').style.display='none';
+  try{document.getElementById('ls').style.display='none';}catch(e){}
   rfb();rf();
 }
 function sv(n){

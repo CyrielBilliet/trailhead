@@ -2904,14 +2904,74 @@ async function testSupabase(){
   }
 }
 
+// Posts are stored in two states:
+// - summary: no photos body, lightweight for feed
+// - full: complete data, loaded on demand
+const fullPostCache = {}; // id -> full post data
+
+async function sbSelectSummary(){
+  // Load posts with only feed-relevant fields (strip photos and GPX)
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/posts?select=*&order=id`,{
+      headers:{...sbHeaders(),'Cache-Control':'no-cache'}
+    });
+    if(!r.ok) return [];
+    const rows=await r.json();
+    return rows.map(row=>{
+      const p=row.data;
+      // Keep only what the feed needs
+      return{
+        id:p.id,
+        title:p.title,
+        date:p.date,
+        category:p.category,
+        groups:p.groups,
+        persons:p.persons,
+        scores:p.scores,
+        planned:p.planned,
+        bannerIndex:p.bannerIndex||0,
+        // Only banner photo for thumbnail
+        photos:p.photos&&p.photos.length?[p.photos[Math.min(p.bannerIndex||0,p.photos.length-1)]]:[], 
+        _allPhotoCount:p.photos?.length||0,
+        // Track stats only (no GPX data)
+        tracks:(p.tracks||[]).map(t=>({
+          id:t.id,name:t.name,color:t.color,
+          stats:t.stats?{dist:t.stats.dist,elevGain:t.stats.elevGain,elevLoss:t.stats.elevLoss,elevs:t.stats.elevs,lats:t.stats.lats,lngs:t.stats.lngs}:null
+        })),
+        connections:p.connections,
+        pois:p.pois,
+        _isFullyLoaded:false
+      };
+    });
+  }catch(e){console.warn('Supabase summary error:',e);return[];}
+}
+
+async function loadFullPost(id){
+  if(fullPostCache[id]) return fullPostCache[id];
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/posts?id=eq.${encodeURIComponent(id)}&select=*`,{
+      headers:{...sbHeaders(),'Cache-Control':'no-cache'}
+    });
+    if(!r.ok) return null;
+    const rows=await r.json();
+    if(!rows.length) return null;
+    const full=rows[0].data;
+    full._isFullyLoaded=true;
+    fullPostCache[id]=full;
+    // Update in posts array too
+    const idx=posts.findIndex(p=>p.id===id);
+    if(idx>-1) posts[idx]=full;
+    return full;
+  }catch(e){console.warn('Full post load error:',e);return null;}
+}
+
 async function loadFromSupabase(){
   try{
     const [p,g,pe,v]=await Promise.all([
-      sbSelect('posts'),sbSelect('groups'),sbSelect('persons'),sbSelect('vacations')
+      sbSelectSummary(),sbSelect('groups'),sbSelect('persons'),sbSelect('vacations')
     ]);
     if(p.length||g.length||pe.length||v.length){
       posts=p; groups=g; persons=pe; vacations=v;
-      // Sync IndexedDB to match Supabase (removes deleted items from local cache)
       await syncIDBFromSupabase();
       return true;
     }
@@ -3646,7 +3706,15 @@ function showEd(id){
   }
   rgp();renderPersonChips();renderEditorScores();sv('editor');
 }
-function ep(id){event.stopPropagation();showEd(id)}
+async function ep(id){
+  event.stopPropagation();
+  const p=posts.find(x=>x.id===id);
+  if(p&&!p._isFullyLoaded){
+    toast('⏳ Post laden…');
+    await loadFullPost(id);
+  }
+  showEd(id);
+}
 async function sp(){
   const title=document.getElementById('ft').value.trim();if(!title){toast('Voeg een titel toe');return}
   ctr.forEach((t,i)=>{const inp=document.getElementById('tn-'+t.id);if(inp)ctr[i].name=inp.value||('Track '+(i+1))});
@@ -3931,11 +3999,20 @@ function hideElevMarker(trackId){
 /* POST VIEW */
 let currentPostId=null;
 let viewPoiMarkers={}; // poi.id -> [L.Marker] (on post/sidebar map)
-function vp(id){
+async function vp(id){
   viewPoiMarkers={}; // reset marker refs for new post
   currentPostId=id;
   // Update URL hash
   if(location.hash!=='#/post/'+id) history.pushState(null,'','#/post/'+id);
+  // Load full post if only summary is available
+  const summary=posts.find(x=>x.id===id);
+  if(summary&&!summary._isFullyLoaded){
+    // Show loading state
+    sv('post');
+    document.getElementById('pvb').innerHTML='<div style="text-align:center;padding:2rem;color:var(--muted);font-family:var(--sans)">⏳ Laden…</div>';
+    const full=await loadFullPost(id);
+    if(!full){toast('⚠ Post kon niet geladen worden');sv('feed');return;}
+  }
   // Update page title and OG tags
   const _p=posts.find(x=>x.id===id);
   if(_p){

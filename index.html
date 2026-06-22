@@ -4333,7 +4333,12 @@ function togglePoiCard(bodyId,chevId){
 }
 
 function tib2(bid,cid){const b=document.getElementById(bid),c=document.getElementById(cid);if(!b)return;const o=b.classList.toggle('open');if(c)c.classList.toggle('open',o)}
-function ivm(){if(!mp)return;if(typeof L==='undefined'){setTimeout(ivm,200);return;}const p=mp;setTimeout(()=>{try{if(vm){vm.remove();vm=null}}catch(e){vm=null}vm=mkMap('pmap');const ab=[];(p.tracks||[]).forEach(t=>{if(!t.stats||!t.stats.lats)return;ensureTrackArrays(t);if(!t.stats.lats.length)return;const c=t.stats.lats.map((lat,i)=>[lat,t.stats.lngs[i]]).filter(pt=>pt[0]!=null&&pt[1]!=null&&typeof pt[0]==='number'&&typeof pt[1]==='number');L.polyline(c,{color:t.color,weight:3.5,opacity:.9}).addTo(vm).bindTooltip(esc(t.name),{sticky:false});
+function ivm(){if(!mp)return;if(typeof L==='undefined'){setTimeout(ivm,200);return;}const p=mp;setTimeout(()=>{try{if(vm){vm.remove();vm=null}}catch(e){vm=null}vm=mkMap('pmap');const ab=[];(p.tracks||[]).forEach(t=>{
+  if(!t.stats||!t.stats.lats){console.warn('No stats/lats for track',t.name);return;}
+  console.log('Track',t.name,'lats type:',typeof t.stats.lats,'isArray:',Array.isArray(t.stats.lats),'length:',t.stats.lats?.length||Object.keys(t.stats.lats||{}).length,'sample:',JSON.stringify(t.stats.lats).slice(0,80));
+  ensureTrackArrays(t);
+  if(!t.stats.lats.length){console.warn('Empty lats after ensure');return;}
+  const c=t.stats.lats.map((lat,i)=>[lat,t.stats.lngs[i]]).filter(pt=>pt[0]!=null&&pt[1]!=null&&typeof pt[0]==='number'&&typeof pt[1]==='number');L.polyline(c,{color:t.color,weight:3.5,opacity:.9}).addTo(vm).bindTooltip(esc(t.name),{sticky:false});
 const vmPl=L.polyline(c,{color:t.color,weight:8,opacity:0}).addTo(vm);
 vmPl.on('mousemove',e=>{
   if(!t.stats||!t.stats.elevs||!t.stats.elevs.length) return;

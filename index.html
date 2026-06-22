@@ -2862,15 +2862,9 @@ async function sbUpsertRaw(table, id, data){
 
 async function sbUpsert(table, item){
   if(table==='posts'){
-    // Save GPX strings separately, strip from post payload
+    // Note: raw GPX strings are NOT stored in Supabase (too large)
+    // Track stats (lats, lngs, elevs) are sufficient for map rendering
     const tracks=(item.tracks||[]);
-    const hasGpx=tracks.some(t=>t.gpx);
-    if(hasGpx){
-      // Save each track's GPX to gpx table
-      for(const t of tracks){
-        if(t.gpx) await sbUpsertRaw('gpx', item.id+'_'+t.id, {postId:item.id, trackId:t.id, gpx:t.gpx});
-      }
-    }
     // Save post without raw GPX strings, downsample coordinates
     const payload={...item, tracks:tracks.map(t=>{
       const stats=t.stats?{...t.stats,
@@ -2981,26 +2975,14 @@ async function sbSelectSummary(){
 async function loadFullPost(id){
   if(fullPostCache[id]) return fullPostCache[id];
   try{
-    // Load post and GPX in parallel
-    const [postRes, gpxRes]=await Promise.all([
-      fetch(`${SB_URL}/rest/v1/posts?id=eq.${encodeURIComponent(id)}&select=*`,{
-        headers:{...sbHeaders(),'Cache-Control':'no-cache'}
-      }),
-      fetch(`${SB_URL}/rest/v1/gpx?data->postId=eq.${encodeURIComponent(id)}&select=*`,{
-        headers:{...sbHeaders(),'Cache-Control':'no-cache'}
-      })
-    ]);
+    // Load full post (GPX raw strings not stored in Supabase - stats are sufficient)
+    const postRes=await fetch(`${SB_URL}/rest/v1/posts?id=eq.${encodeURIComponent(id)}&select=*`,{
+      headers:{...sbHeaders(),'Cache-Control':'no-cache'}
+    });
     if(!postRes.ok) return null;
     const rows=await postRes.json();
     if(!rows.length) return null;
     const full=rows[0].data;
-    // Merge GPX back into tracks
-    if(gpxRes.ok){
-      const gpxRows=await gpxRes.json();
-      const gpxMap={};
-      gpxRows.forEach(r=>{gpxMap[r.data.trackId]=r.data.gpx});
-      full.tracks=(full.tracks||[]).map(t=>({...t, gpx:gpxMap[t.id]||t.gpx}));
-    }
     full._isFullyLoaded=true;
     fullPostCache[id]=full;
     const idx=posts.findIndex(p=>p.id===id);
@@ -3798,11 +3780,7 @@ async function dp2(id){
   await dde('posts',id);
   if(isLoggedIn){
     const ok=await sbDelete('posts',id);
-    // Also delete GPX entries for this post
-    fetch(`${SB_URL}/rest/v1/gpx?data->postId=eq.${encodeURIComponent(id)}`,{
-      method:'DELETE',
-      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
-    }).catch(()=>{});
+
     if(!ok) toast('⚠ Supabase delete mislukt — klik ☁ om te synchroniseren');
   }
   ex.delete(id);

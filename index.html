@@ -2943,14 +2943,16 @@ async function syncIDBFromSupabase(){
 async function syncAllToSupabase(){
   if(!isLoggedIn) return;
   try{
-    await Promise.all([
-      ...posts.map(p=>sbUpsert('posts',p)),
-      ...groups.map(g=>sbUpsert('groups',g)),
-      ...persons.map(p=>sbUpsert('persons',p)),
-      ...vacations.map(v=>sbUpsert('vacations',v))
-    ]);
+    // Sequential upsert to avoid Supabase rate limits
+    for(const p of posts) await sbUpsert('posts',p);
+    for(const g of groups) await sbUpsert('groups',g);
+    for(const p of persons) await sbUpsert('persons',p);
+    for(const v of vacations) await sbUpsert('vacations',v);
     toast('☁ Gesynchroniseerd');
-  }catch(e){toast('⚠ Sync mislukt');}
+  }catch(e){
+    console.error('Sync error:',e);
+    toast('⚠ Sync mislukt — probeer opnieuw');
+  }
 }
 
 

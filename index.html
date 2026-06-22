@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Trailhead — Adventure Log</title>
+<meta property="og:site_name" content="Trailhead">
+<meta property="og:type" content="website">
+<meta name="og:title" id="og-title" content="Trailhead — Adventure Log">
+<meta name="og:description" id="og-desc" content="Persoonlijk avonturenlogboek">
+<meta name="og:image" id="og-image" content="">
+<meta name="og:url" id="og-url" content="https://cyrielbilliet.github.io/trailhead/">
+<meta name="twitter:card" content="summary_large_image">
+<title id="page-title">Trailhead</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-curve@0.8.0/leaflet.curve.js"></script>
@@ -2924,6 +2932,68 @@ async function syncAllToSupabase(){
 
 
 
+/* URL ROUTING */
+function setHash(hash){
+  history.pushState(null,'',hash||'#');
+}
+
+function getHash(){
+  return location.hash||'';
+}
+
+function parseHash(){
+  const h=getHash();
+  if(h.startsWith('#/post/')) return {type:'post', id:h.slice(7)};
+  if(h.startsWith('#/planner')) return {type:'planner'};
+  if(h.startsWith('#/vacations')) return {type:'vacations'};
+  return {type:'feed'};
+}
+
+function navigateTo(type, id){
+  switch(type){
+    case 'post':
+      setHash('#/post/'+id);
+      vp(id);
+      break;
+    case 'planner':
+      setHash('#/planner');
+      sv('feed');
+      sft('plan');
+      break;
+    case 'vacations':
+      setHash('#/vacations');
+      sv('vacations');
+      break;
+    default:
+      setHash('#/feed');
+      sv('feed');
+  }
+}
+
+function handleHashChange(){
+  const route=parseHash();
+  if(route.type==='post'){
+    const p=posts.find(x=>x.id===route.id);
+    if(p) vp(route.id);
+    else sv('feed');
+  } else if(route.type==='planner'){
+    sv('feed');sft('plan');
+  } else if(route.type==='vacations'){
+    sv('vacations');
+  } else {
+    sv('feed');
+  }
+}
+
+function initRouting(){
+  window.addEventListener('popstate', handleHashChange);
+  // Handle initial hash on load
+  const route=parseHash();
+  if(route.type==='post'&&posts.find(x=>x.id===route.id)){
+    vp(route.id);
+  }
+}
+
 /* AUTHENTICATIE */
 const PWD_HASH='dbfc0b038145c322ad4a02825321d52ec535bda9fc290aa5afa208679281244b';
 let isLoggedIn=false;
@@ -3280,7 +3350,25 @@ async function boot(){
   document.getElementById('ls').style.display='none';
   rfb();rf();
 }
-function sv(n){closeDrawer();document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.getElementById('view-'+n).classList.add('active');if(n==='feed'){rfb();rf();if(cft==='map')rom()}if(n==='groups')rgm();if(n==='persons')renderPersonsManager();if(n==='vacations')renderVacations();if(n==='vacation-detail'){}if(n==='post')ivm()}
+function sv(n){
+  closeDrawer();
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+n).classList.add('active');
+  // Update URL hash based on view
+  if(n==='feed'&&location.hash&&!location.hash.startsWith('#/feed')) history.pushState(null,'','#/feed');
+  if(n==='feed'){
+    document.title='Trailhead';
+    document.getElementById('og-title')?.setAttribute('content','Trailhead — Adventure Log');
+    document.getElementById('og-url')?.setAttribute('content','https://cyrielbilliet.github.io/trailhead/');
+  }
+  if(n==='vacations') history.pushState(null,'','#/vacations');
+  if(n==='feed'){rfb();rf();if(cft==='map')rom()}
+  if(n==='groups')rgm();
+  if(n==='persons')renderPersonsManager();
+  if(n==='vacations')renderVacations();
+  if(n==='vacation-detail'){}
+  if(n==='post')ivm();
+}
 function sft(n){
   cft=n;
   document.querySelectorAll('.ftab').forEach(t=>t.classList.remove('active'));
@@ -3817,6 +3905,20 @@ let viewPoiMarkers={}; // poi.id -> [L.Marker] (on post/sidebar map)
 function vp(id){
   viewPoiMarkers={}; // reset marker refs for new post
   currentPostId=id;
+  // Update URL hash
+  if(location.hash!=='#/post/'+id) history.pushState(null,'','#/post/'+id);
+  // Update page title and OG tags
+  const _p=posts.find(x=>x.id===id);
+  if(_p){
+    const _title=(_p.title||'Post')+' — Trailhead';
+    const _desc=_p.body?_p.body.slice(0,150).replace(/[#*_]/g,'')+'…':'Trailhead Adventure Log';
+    const _img=_p.photos&&_p.photos.length?_p.photos[_p.bannerIndex||0]?.src:'';
+    document.title=_title;
+    document.getElementById('og-title')?.setAttribute('content',_title);
+    document.getElementById('og-desc')?.setAttribute('content',_desc);
+    document.getElementById('og-image')?.setAttribute('content',_img||'');
+    document.getElementById('og-url')?.setAttribute('content','https://cyrielbilliet.github.io/trailhead/#/post/'+id);
+  }
   const p=posts.find(x=>x.id===id);if(!p)return;
   const pg=(p.groups||[]).map(gid=>groups.find(g=>g.id===gid)).filter(Boolean);
   const mh=`<span class="tag">${p.category||'Adventure'}</span>${p.planned?'<span class="planned-badge">📅 Gepland</span>':''} ${pg.filter(g=>g.name.toLowerCase()!==(p.category||'').toLowerCase()).map(g=>`<span class="gtag">${esc(g.name)}</span>`).join('')}<span>${fd(p.date)}</span>`;
@@ -4082,7 +4184,7 @@ function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace
 function fd(ts){return new Date(ts).toLocaleDateString('nl-BE',{day:'numeric',month:'long',year:'numeric'})}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
 window.addEventListener('resize',()=>{if(vm)vm.invalidateSize();if(em)em.invalidateSize();if(om)om.invalidateSize();if(sidebarMap)sidebarMap.invalidateSize();});
-if(typeof L!=="undefined"){boot().then(checkAuth);}else{window.addEventListener("load",()=>boot().then(checkAuth));}
+if(typeof L!=="undefined"){boot().then(checkAuth).then(initRouting);}else{window.addEventListener("load",()=>boot().then(checkAuth).then(initRouting));}
 </script>
 
 <!-- FULLSCREEN MAP OVERLAY -->

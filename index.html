@@ -2848,6 +2848,22 @@ async function ensureTrackArrays(t){
   return t;
 }
 
+async function compressForCloud(ph){
+  // Compress photo to max 600px and quality 0.5 for cloud storage
+  return new Promise(r=>{
+    const MAX=600,Q=.5,img=new Image();
+    img.onload=()=>{
+      let w=img.width,h=img.height;
+      if(w>MAX||h>MAX){const s=MAX/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s)}
+      const c=document.createElement('canvas');c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      r({...ph,src:c.toDataURL('image/jpeg',Q)});
+    };
+    img.onerror=()=>r(ph); // fallback to original
+    img.src=ph.src;
+  });
+}
+
 function downsample(arr, maxPoints){
   if(!arr||arr.length<=maxPoints) return arr;
   const step=arr.length/maxPoints;
@@ -2926,7 +2942,13 @@ async function sbUpsert(table, item){
     };
     // Store full photos separately in photos table
     if(item.photos&&item.photos.length>1){
-      await sbUpsertRaw('photos', item.id, {postId:item.id, photos:item.photos});
+      // Compress photos further for cloud storage and split into chunks of 3
+      const sbPhotos=await Promise.all(item.photos.map(ph=>compressForCloud(ph)));
+      const chunkSize=3;
+      for(let i=0;i<sbPhotos.length;i+=chunkSize){
+        const chunk=sbPhotos.slice(i,i+chunkSize);
+        await sbUpsertRaw('photos', item.id+'_'+i, {postId:item.id, chunkIdx:i, photos:chunk});
+      }
     }
     return sbUpsertRaw('posts', payload.id, payload);
   }
@@ -3080,15 +3102,21 @@ async function loadFullPost(id){
       }
       return t;
     });
-    // Load full photos if stored separately
+    // Load full photos from chunks
     if(full._allPhotoCount>1){
       try{
-        const pr=await fetch(`${SB_URL}/rest/v1/photos?id=eq.${encodeURIComponent(id)}&select=*`,{
+        const pr=await fetch(`${SB_URL}/rest/v1/photos?data->postId=eq.${encodeURIComponent(id)}&select=*&order=data->chunkIdx`,{
           headers:{...sbHeaders(),'Cache-Control':'no-cache'}
         });
         if(pr.ok){
           const prows=await pr.json();
-          if(prows.length) full.photos=prows[0].data.photos;
+          if(prows.length){
+            // Reassemble chunks in order
+            const allPhotos=prows
+              .sort((a,b)=>(a.data.chunkIdx||0)-(b.data.chunkIdx||0))
+              .flatMap(r=>r.data.photos||[]);
+            if(allPhotos.length) full.photos=allPhotos;
+          }
         }
       }catch(e){console.warn('Photo load error:',e);}
     }

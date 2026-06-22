@@ -1448,7 +1448,7 @@ function printPost(id, withPhotos){
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18}).addTo(pm);
       const allBounds=[];
       tracks.forEach(t=>{
-        if(!t.stats||!t.stats.lats)return;
+        if(!t.stats||!t.stats.lats)return;ensureTrackArrays(t);
         const coords=t.stats.lats.map((la,i)=>[la,t.stats.lngs[i]]);
         L.polyline(coords,{color:t.color,weight:3,opacity:.9}).addTo(pm);
         allBounds.push(...coords);
@@ -2382,7 +2382,7 @@ function openFullscreenMap(){
     const tracks=p.tracks||[];
     const allBounds=[];
     tracks.forEach(t=>{
-      if(!t.stats||!t.stats.lats)return;
+      if(!t.stats||!t.stats.lats)return;ensureTrackArrays(t);
       const coords=t.stats.lats.map((la,i)=>[la,t.stats.lngs[i]]);
       L.polyline(coords,{color:t.color,weight:3.5,opacity:.9}).addTo(fsMap).bindTooltip(esc(t.name),{sticky:true});
       const fsPl=L.polyline(coords,{color:t.color,weight:8,opacity:0}).addTo(fsMap);
@@ -2690,7 +2690,7 @@ function initPostSidebar(p){
 
   const allBounds=[];
   tracks.forEach(t=>{
-    if(!t.stats||!t.stats.lats)return;
+    if(!t.stats||!t.stats.lats)return;ensureTrackArrays(t);
     const coords=t.stats.lats.map((la,i)=>[la,t.stats.lngs[i]]);
     const sbPl=L.polyline(coords,{color:t.color,weight:8,opacity:0}).addTo(sidebarMap);
     L.polyline(coords,{color:t.color,weight:3,opacity:.9}).addTo(sidebarMap)
@@ -2834,7 +2834,15 @@ async function sbSelect(table){
   }catch(e){console.warn('Supabase read error:',e);return[];}
 }
 
-async function downsample(arr, maxPoints){
+async function ensureTrackArrays(t){
+  if(!t||!t.stats) return t;
+  if(t.stats.lats&&!Array.isArray(t.stats.lats)) t.stats.lats=Object.values(t.stats.lats);
+  if(t.stats.lngs&&!Array.isArray(t.stats.lngs)) t.stats.lngs=Object.values(t.stats.lngs);
+  if(t.stats.elevs&&!Array.isArray(t.stats.elevs)) t.stats.elevs=Object.values(t.stats.elevs);
+  return t;
+}
+
+function downsample(arr, maxPoints){
   if(!arr||arr.length<=maxPoints) return arr;
   const step=arr.length/maxPoints;
   return Array.from({length:maxPoints},(_, i)=>arr[Math.round(i*step)]);
@@ -3543,7 +3551,7 @@ function rom(){
       <button class="btn btn-sm btn-primary" onclick="vp('${p.id}')" style="width:100%;justify-content:center;margin-top:2px">Bekijk post →</button>
     </div>`;
     tracks.forEach(t=>{
-      if(!t.stats||!t.stats.lats)return;
+      if(!t.stats||!t.stats.lats)return;ensureTrackArrays(t);
       const coords=t.stats.lats.map((la,i)=>[la,t.stats.lngs[i]]);
       const poly=L.polyline(coords,{color:col,weight:3.5,opacity:.85}).addTo(om).bindPopup(pop,{maxWidth:240})
         .on('mouseover',function(){this.setStyle({weight:5,opacity:1})})
@@ -4051,7 +4059,10 @@ function hideElevMarker(trackId){
 /* POST VIEW */
 let currentPostId=null;
 let viewPoiMarkers={}; // poi.id -> [L.Marker] (on post/sidebar map)
+let _vpRunning=false;
 async function vp(id){
+  if(_vpRunning) return;
+  _vpRunning=true;
   viewPoiMarkers={}; // reset marker refs for new post
   currentPostId=id;
   // Update URL hash
@@ -4063,7 +4074,7 @@ async function vp(id){
     sv('post');
     document.getElementById('pvb').innerHTML='<div style="text-align:center;padding:2rem;color:var(--muted);font-family:var(--sans)">⏳ Laden…</div>';
     const full=await loadFullPost(id);
-    if(!full){toast('⚠ Post kon niet geladen worden');sv('feed');return;}
+    if(!full){toast('⚠ Post kon niet geladen worden');_vpRunning=false;sv('feed');return;}
   }
   // Update page title and OG tags
   const _p=posts.find(x=>x.id===id);
@@ -4235,6 +4246,7 @@ async function vp(id){
   // Show execute button if planned
   const execBtn=document.getElementById('pv-execute-btn');
   if(execBtn) execBtn.innerHTML=p.planned?`<button class="btn btn-sm btn-execute edit-only" onclick="executePost('${p.id}')">✓ Markeer als uitgevoerd</button>`:'';
+  _vpRunning=false;
   initPostSidebar(p);spt('story');sv('post');
 }
 function rtlv(b){const cfg=b.tlConfig||{};const notes=(b.tlNotes||[]).slice().sort((a,z)=>(a.timeFrom||'').localeCompare(z.timeFrom||''));const sd=cfg.startDate,ed=cfg.endDate||sd;let rs='';if(sd){const s=fds(sd);rs=ed&&ed!==sd?`${s} → ${fds(ed)}`:s;if(cfg.startTime)rs+=` · ${cfg.startTime}`;if(cfg.endTime)rs+=` → ${cfg.endTime}`}let h=`<div class="tlv">`;if(rs)h+=`<div class="tlrh"><span class="tlrb">📅 ${esc(rs)}</span></div>`;h+=`<div class="tlsp">`;notes.forEach(n=>{const sp=n.type==='span';const tl=sp&&n.timeTo?`${n.timeFrom||'?'} → ${n.timeTo}`:(n.timeFrom||'');h+=`<div class="tli"><div class="tldt ${sp?'sp':''}"></div><div class="tlii ${sp?'sp':''}">
@@ -4263,7 +4275,7 @@ function togglePoiCard(bodyId,chevId){
 }
 
 function tib2(bid,cid){const b=document.getElementById(bid),c=document.getElementById(cid);if(!b)return;const o=b.classList.toggle('open');if(c)c.classList.toggle('open',o)}
-function ivm(){if(!mp)return;if(typeof L==='undefined'){setTimeout(ivm,200);return;}const p=mp;setTimeout(()=>{if(vm){vm.remove();vm=null}vm=mkMap('pmap');const ab=[];(p.tracks||[]).forEach(t=>{if(!t.stats||!t.stats.lats)return;const c=t.stats.lats.map((lat,i)=>[lat,t.stats.lngs[i]]);L.polyline(c,{color:t.color,weight:3.5,opacity:.9}).addTo(vm).bindTooltip(esc(t.name),{sticky:false});
+function ivm(){if(!mp)return;if(typeof L==='undefined'){setTimeout(ivm,200);return;}const p=mp;setTimeout(()=>{try{if(vm){vm.remove();vm=null}}catch(e){vm=null}vm=mkMap('pmap');const ab=[];(p.tracks||[]).forEach(t=>{if(!t.stats||!t.stats.lats)return;if(!Array.isArray(t.stats.lats))t.stats.lats=Object.values(t.stats.lats);if(!Array.isArray(t.stats.lngs))t.stats.lngs=Object.values(t.stats.lngs);if(t.stats.elevs&&!Array.isArray(t.stats.elevs))t.stats.elevs=Object.values(t.stats.elevs);const c=t.stats.lats.map((lat,i)=>[lat,t.stats.lngs[i]]);L.polyline(c,{color:t.color,weight:3.5,opacity:.9}).addTo(vm).bindTooltip(esc(t.name),{sticky:false});
 const vmPl=L.polyline(c,{color:t.color,weight:8,opacity:0}).addTo(vm);
 vmPl.on('mousemove',e=>{
   if(!t.stats||!t.stats.elevs||!t.stats.elevs.length) return;

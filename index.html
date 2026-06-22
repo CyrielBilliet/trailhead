@@ -2276,6 +2276,7 @@ async function resolveConnCoords(){
 function drawConnOnMap(map, conn){
   const ct=CONN_TYPES[conn.type]||CONN_TYPES.train;
   if(!conn.fromCoord||!conn.toCoord) return;
+  if(typeof conn.fromCoord.lat==='undefined'||typeof conn.toCoord.lat==='undefined') return;
 
   const f=[conn.fromCoord.lat,conn.fromCoord.lng];
   const t=[conn.toCoord.lat,conn.toCoord.lng];

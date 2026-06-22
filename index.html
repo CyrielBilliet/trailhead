@@ -2836,6 +2836,19 @@ async function sbSelect(table){
 
 async function sbUpsert(table, item){
   try{
+    // Strip large photo data for non-post tables, strip GPX for posts if too large
+    let payload=item;
+    if(table==='posts'){
+      // Estimate size
+      const json=JSON.stringify(item);
+      if(json.length > 800000){
+        // Too large - strip GPX data from tracks (keep stats only)
+        payload={...item, tracks:(item.tracks||[]).map(t=>({
+          ...t, gpx:undefined
+        }))};
+        console.warn('Post too large, stripping GPX for Supabase');
+      }
+    }
     const r=await fetch(`${SB_URL}/rest/v1/${table}`,{
       method:'POST',
       headers:{
@@ -2844,7 +2857,7 @@ async function sbUpsert(table, item){
         'Content-Type':'application/json',
         'Prefer':'resolution=merge-duplicates,return=minimal'
       },
-      body:JSON.stringify({id:item.id, data:item})
+      body:JSON.stringify({id:payload.id, data:payload})
     });
     if(!r.ok){
       let err='';
@@ -3468,7 +3481,7 @@ function sft(n){
   else{document.getElementById('ftab-map').classList.add('active');rom()}
 }
 function spt(n){document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.ptabp').forEach(p=>p.classList.remove('active'));document.getElementById('tab-'+n).classList.add('active');if(n==='story'){document.querySelectorAll('.ptab')[0].classList.add('active');ivm()}else document.getElementById('tib').classList.add('active')}
-function cp2(d){return new Promise(r=>{const M=1600,Q=.82,i=new Image();i.onload=()=>{let w=i.width,h=i.height;if(w>M||h>M){const s=M/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s)}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(i,0,0,w,h);r(c.toDataURL('image/jpeg',Q))};i.src=d})}
+function cp2(d){return new Promise(r=>{const M=1200,Q=.75,i=new Image();i.onload=()=>{let w=i.width,h=i.height;if(w>M||h>M){const s=M/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s)}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(i,0,0,w,h);r(c.toDataURL('image/jpeg',Q))};i.src=d})}
 
 /* OVERVIEW MAP */
 function rom(){
@@ -3729,7 +3742,11 @@ async function sp(){
   const planned=document.getElementById('f-planned').checked;
   const p={id:eid||Date.now().toString(),title,body:document.getElementById('fb').value.trim(),category:cat,planned,groups:finalGroups,date:eid?(posts.find(x=>x.id===eid)||{}).date||Date.now():Date.now(),tracks:ctr,connections:currentConns,pois:currentPois,persons:currentPersons,scores:currentScores,photos:cph,pins:cpn,bannerIndex:cbi,infoBlocks:cib.filter(b=>{if(b.type==='timeline')return b.title.trim()||(b.tlNotes||[]).length;return b.title.trim()||(Array.isArray(b.content)?b.content.some(i=>i.trim()):b.content?.trim())})};
   if(eid){const i=posts.findIndex(x=>x.id===eid);if(i>-1)posts[i]=p}else posts.push(p);
-  await dpu('posts',p);toast('Post opgeslagen!');syncAllToSupabase();
+  await dpu('posts',p);
+  const _sz=JSON.stringify(p).length;
+  if(_sz>800000) toast('⚠ Post is groot ('+Math.round(_sz/1024)+'KB) — gebruik minder of kleinere fotos');
+  else toast('✓ Post opgeslagen!');
+  syncAllToSupabase();
   if(planned){
     sv('feed');
     sft('plan');

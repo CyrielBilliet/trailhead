@@ -3072,7 +3072,7 @@ async function loadFullPost(id){
       fetch(`${SB_URL}/rest/v1/posts?id=eq.${encodeURIComponent(id)}&select=*`,{
         headers:{...sbHeaders(),'Cache-Control':'no-cache'}
       }),
-      fetch(`${SB_URL}/rest/v1/tracks?data->postId=eq.${encodeURIComponent(id)}&select=*`,{
+      fetch(`${SB_URL}/rest/v1/tracks?data->>postId=eq.${encodeURIComponent(id)}&select=*`,{
         headers:{...sbHeaders(),'Cache-Control':'no-cache'}
       })
     ]);
@@ -3108,7 +3108,7 @@ async function loadFullPost(id){
     // Load full photos from chunks
     if(full._allPhotoCount>1){
       try{
-        const pr=await fetch(`${SB_URL}/rest/v1/photos?data->postId=eq.${encodeURIComponent(id)}&select=*&order=data->chunkIdx`,{
+        const pr=await fetch(`${SB_URL}/rest/v1/photos?data->>postId=eq.${encodeURIComponent(id)}&select=*&order=data->chunkIdx`,{
           headers:{...sbHeaders(),'Cache-Control':'no-cache'}
         });
         if(pr.ok){
@@ -3929,7 +3929,13 @@ async function dp2(id){
   await dde('posts',id);
   if(isLoggedIn){
     const ok=await sbDelete('posts',id);
-
+    // Delete associated photos and tracks
+    fetch(`${SB_URL}/rest/v1/photos?data->>postId=eq.${encodeURIComponent(id)}`,{
+      method:'DELETE', headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
+    }).catch(()=>{});
+    fetch(`${SB_URL}/rest/v1/tracks?data->>postId=eq.${encodeURIComponent(id)}`,{
+      method:'DELETE', headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
+    }).catch(()=>{});
     if(!ok) toast('⚠ Supabase delete mislukt — klik ☁ om te synchroniseren');
   }
   ex.delete(id);

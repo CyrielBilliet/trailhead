@@ -2834,6 +2834,12 @@ async function sbSelect(table){
   }catch(e){console.warn('Supabase read error:',e);return[];}
 }
 
+async function downsample(arr, maxPoints){
+  if(!arr||arr.length<=maxPoints) return arr;
+  const step=arr.length/maxPoints;
+  return Array.from({length:maxPoints},(_, i)=>arr[Math.round(i*step)]);
+}
+
 async function sbUpsertRaw(table, id, data){
   try{
     const r=await fetch(`${SB_URL}/rest/v1/${table}`,{
@@ -2865,8 +2871,16 @@ async function sbUpsert(table, item){
         if(t.gpx) await sbUpsertRaw('gpx', item.id+'_'+t.id, {postId:item.id, trackId:t.id, gpx:t.gpx});
       }
     }
-    // Save post without raw GPX strings
-    const payload={...item, tracks:tracks.map(t=>({...t, gpx:undefined}))};
+    // Save post without raw GPX strings, downsample coordinates
+    const payload={...item, tracks:tracks.map(t=>{
+      const stats=t.stats?{...t.stats,
+        // Downsample lats/lngs to max 500 points for storage
+        lats:t.stats.lats?downsample(t.stats.lats,500):t.stats.lats,
+        lngs:t.stats.lngs?downsample(t.stats.lngs,500):t.stats.lngs,
+        elevs:t.stats.elevs?downsample(t.stats.elevs,500):t.stats.elevs
+      }:t.stats;
+      return{...t, gpx:undefined, stats};
+    })};
     return sbUpsertRaw('posts', payload.id, payload);
   }
   return sbUpsertRaw(table, item.id, item);
@@ -2954,6 +2968,7 @@ async function sbSelectSummary(){
         tracks:(p.tracks||[]).map(t=>({
           id:t.id,name:t.name,color:t.color,
           stats:t.stats?{dist:t.stats.dist,elevGain:t.stats.elevGain,elevLoss:t.stats.elevLoss,elevs:t.stats.elevs,lats:t.stats.lats,lngs:t.stats.lngs}:null
+          // Note: lats/lngs kept for overview map
         })),
         connections:p.connections,
         pois:p.pois,
@@ -3501,7 +3516,7 @@ function sft(n){
   else{document.getElementById('ftab-map').classList.add('active');rom()}
 }
 function spt(n){document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.ptabp').forEach(p=>p.classList.remove('active'));document.getElementById('tab-'+n).classList.add('active');if(n==='story'){document.querySelectorAll('.ptab')[0].classList.add('active');ivm()}else document.getElementById('tib').classList.add('active')}
-function cp2(d){return new Promise(r=>{const M=1200,Q=.75,i=new Image();i.onload=()=>{let w=i.width,h=i.height;if(w>M||h>M){const s=M/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s)}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(i,0,0,w,h);r(c.toDataURL('image/jpeg',Q))};i.src=d})}
+function cp2(d){return new Promise(r=>{const M=900,Q=.65,i=new Image();i.onload=()=>{let w=i.width,h=i.height;if(w>M||h>M){const s=M/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s)}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(i,0,0,w,h);r(c.toDataURL('image/jpeg',Q))};i.src=d})}
 
 /* OVERVIEW MAP */
 function rom(){
@@ -4265,22 +4280,7 @@ vmPl.on('mousemove',e=>{
   showElevMarker(t.id,elevIdx,t.stats.elevs.length,elev);
 });
 vmPl.on('mouseout',()=>{ vmPl.closeTooltip();hideElevMarker(t.id)});
-pl.on('mousemove',e=>{
-  if(!t.stats||!t.stats.elevs||!t.stats.elevs.length) return;
-  const ll=e.latlng;
-  let minD=Infinity,bestI=0;
-  c.forEach((pt,i)=>{
-    const d=Math.pow(pt[0]-ll.lat,2)+Math.pow(pt[1]-ll.lng,2);
-    if(d<minD){minD=d;bestI=i}
-  });
-  // Map coord index to elevs index (elevs may be downsampled)
-  const elevIdx=Math.round((bestI/(c.length-1))*(t.stats.elevs.length-1));
-  const elev=Math.round(t.stats.elevs[elevIdx]||0);
-  const dist=((bestI/(c.length-1))*parseFloat(t.stats.dist||0)).toFixed(1);
-  pl.bindTooltip(`<strong>${elev}m</strong> <span style="font-weight:400;opacity:.8">· ${dist} km</span>`,{sticky:true,className:'elev-map-tip'}).openTooltip(e.latlng);
-  showElevMarker(t.id, elevIdx, t.stats.elevs.length, elev);
-});
-pl.on('mouseout',()=>{pl.closeTooltip();hideElevMarker(t.id)});ab.push(...c);const di=col=>L.divIcon({html:`<div style="background:${col};width:10px;height:10px;border-radius:50%;border:2px solid rgba(255,255,255,.8);box-shadow:0 1px 4px rgba(0,0,0,.5)"></div>`,iconSize:[10,10],className:''});L.marker(c[0],{icon:di(t.color)}).addTo(vm).bindPopup(`Start: ${esc(t.name)}`);L.marker(c[c.length-1],{icon:di('#e05050')}).addTo(vm).bindPopup(`Einde: ${esc(t.name)}`)});// Add connection coords to bounds
+ab.push(...c);const di=col=>L.divIcon({html:`<div style="background:${col};width:10px;height:10px;border-radius:50%;border:2px solid rgba(255,255,255,.8);box-shadow:0 1px 4px rgba(0,0,0,.5)"></div>`,iconSize:[10,10],className:''});L.marker(c[0],{icon:di(t.color)}).addTo(vm).bindPopup(`Start: ${esc(t.name)}`);L.marker(c[c.length-1],{icon:di('#e05050')}).addTo(vm).bindPopup(`Einde: ${esc(t.name)}`)});// Add connection coords to bounds
 (p.connections||[]).forEach(c=>{if(c.fromCoord)ab.push([c.fromCoord.lat,c.fromCoord.lng]);if(c.toCoord)ab.push([c.toCoord.lat,c.toCoord.lng])});
 if(ab.length)vm.fitBounds(L.latLngBounds(ab),{padding:[24,24]});if(p.pins&&p.photos){Object.entries(p.pins).forEach(([idx,latlng])=>{const ph=p.photos[parseInt(idx)];if(!ph)return;const cap=ph.caption||'';const icon=L.divIcon({html:`<div style="width:40px;height:40px;border-radius:50%;background:#222;border:3px solid #7aaa50;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.5)"><img src="${ph.src}" style="width:100%;height:100%;object-fit:cover;display:block"></div>`,iconSize:[44,44],iconAnchor:[22,22],popupAnchor:[0,-28],className:''});L.marker([latlng.lat,latlng.lng],{icon}).addTo(vm).bindPopup(`<div class="ppop"><img src="${ph.src}" onclick="olb('${ph.src}','${esc(cap)}')">${cap?`<div class="ppop-cap">${esc(cap)}</div>`:''}<button onclick="olb('${ph.src}','${esc(cap)}')" style="width:100%;padding:5px 8px;background:var(--moss);color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-family:var(--sans);margin-top:6px">🔍 Volledig scherm</button></div>`,{maxWidth:240})})}(p.connections||[]).forEach(c=>drawConnOnMap(vm,c));
     (p.pois||[]).forEach((poi,i)=>{poi._photos=p.photos;addPoiMarkerToMap(vm,poi,i+1,false)});

@@ -2855,23 +2855,29 @@ function downsample(arr, maxPoints){
 }
 
 async function sbUpsertRaw(table, id, data){
-  try{
-    const r=await fetch(`${SB_URL}/rest/v1/${table}`,{
-      method:'POST',
-      headers:{
-        'apikey':SB_KEY,
-        'Authorization':'Bearer '+SB_KEY,
-        'Content-Type':'application/json',
-        'Prefer':'resolution=merge-duplicates,return=minimal'
-      },
-      body:JSON.stringify({id, data})
-    });
-    if(!r.ok){
-      let err=''; try{err=await r.text();}catch(e){}
-      console.warn('Supabase upsert error:',table,r.status,err);
-    }
-    return r.ok;
-  }catch(e){console.warn('Supabase write error:',e);return false;}
+  // Retry once on timeout
+  for(let attempt=0;attempt<2;attempt++){
+    try{
+      const r=await fetch(`${SB_URL}/rest/v1/${table}`,{
+        method:'POST',
+        headers:{
+          'apikey':SB_KEY,
+          'Authorization':'Bearer '+SB_KEY,
+          'Content-Type':'application/json',
+          'Prefer':'resolution=merge-duplicates,return=minimal',
+          'x-statement-timeout':'60000'
+        },
+        body:JSON.stringify({id, data})
+      });
+      if(!r.ok){
+        let err=''; try{err=await r.text();}catch(e){}
+        console.warn('Supabase upsert error:',table,r.status,err);
+        if(attempt===0&&r.status===500) continue; // retry on timeout
+      }
+      return r.ok;
+    }catch(e){console.warn('Supabase write error:',e);if(attempt===0) continue;return false;}
+  }
+  return false;
 }
 
 async function sbUpsert(table, item){
@@ -2882,15 +2888,34 @@ async function sbUpsert(table, item){
     // Save post without raw GPX, downsampled coords, and photos stored separately
     const bannerIdx=item.bannerIndex||0;
     const bannerPhoto=item.photos&&item.photos.length?[item.photos[Math.min(bannerIdx,item.photos.length-1)]]:[];
-    const payload={...item,
-      // Store only banner photo in main post record (full photos loaded separately)
+    // Compress banner photo further if needed
+    const payload={
+      id:item.id,
+      title:item.title,
+      date:item.date,
+      category:item.category,
+      groups:item.groups||[],
+      persons:item.persons||[],
+      scores:item.scores||{},
+      planned:item.planned||false,
+      bannerIndex:bannerIdx,
+      body:item.body||'',
+      pois:item.pois||[],
+      connections:item.connections||[],
+      infoBlocks:item.infoBlocks||[],
+      pins:item.pins||{},
       photos:bannerPhoto,
       _allPhotoCount:item.photos?.length||0,
       tracks:tracks.map(t=>{
-        const stats=t.stats?{...t.stats,
-          elevs:t.stats.elevs?downsample(t.stats.elevs,500):t.stats.elevs
+        const stats=t.stats?{
+          dist:t.stats.dist,
+          elevGain:t.stats.elevGain,
+          elevLoss:t.stats.elevLoss,
+          lats:t.stats.lats?downsample(t.stats.lats,200):t.stats.lats,
+          lngs:t.stats.lngs?downsample(t.stats.lngs,200):t.stats.lngs,
+          elevs:t.stats.elevs?downsample(t.stats.elevs,200):t.stats.elevs
         }:t.stats;
-        return{...t, gpx:undefined, stats};
+        return{id:t.id,name:t.name,color:t.color,stats};
       })
     };
     // Store full photos separately in photos table

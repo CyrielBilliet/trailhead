@@ -3521,7 +3521,7 @@ async function sp(){
   }
   refreshSidebar();
 }
-async function dp2(id){if(!confirm('Post verwijderen?'))return;posts=posts.filter(p=>p.id!==id);await dde('posts',id);ex.delete(id);rf();toast('Verwijderd');refreshSidebar()}
+async function dp2(id){if(!confirm('Post verwijderen?'))return;posts=posts.filter(p=>p.id!==id);await dde('posts',id);if(isLoggedIn)await sbDelete('posts',id);ex.delete(id);rf();toast('Verwijderd');refreshSidebar()}
 function rgp(){const p=document.getElementById('gp2');if(!groups.length){p.innerHTML=`<span class="gce">Nog geen groepen.</span>`;return}p.innerHTML=groups.map(g=>`<span class="gc ${cg.includes(g.id)?'sel':''}" onclick="tg('${g.id}')">${esc(g.name)}</span>`).join('')}
 function tg(id){if(cg.includes(id))cg=cg.filter(x=>x!==id);else cg.push(id);rgp()}
 function dov(e,id){e.preventDefault();document.getElementById(id).classList.add('dragover')}

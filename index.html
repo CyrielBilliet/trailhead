@@ -2685,11 +2685,17 @@ async function sbUpsert(table, item){
   try{
     const r=await fetch(`${SB_URL}/rest/v1/${table}`,{
       method:'POST',
-      headers:{...sbHeaders(true),'Prefer':'resolution=merge-duplicates'},
+      headers:{
+        'apikey':SB_KEY,
+        'Authorization':'Bearer '+SB_KEY,
+        'Content-Type':'application/json',
+        'Prefer':'resolution=merge-duplicates,return=minimal'
+      },
       body:JSON.stringify({id:item.id, data:item})
     });
     if(!r.ok){
-      const err=await r.json();
+      let err='';
+      try{err=await r.text();}catch(e){}
       console.warn('Supabase upsert error:',table,r.status,err);
     }
     return r.ok;
@@ -2707,17 +2713,31 @@ async function sbDelete(table, id){
 }
 
 async function testSupabase(){
+  // Test read
   try{
     const r=await fetch(`${SB_URL}/rest/v1/posts?select=*&limit=1`,{
       headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
     });
-    console.log('Supabase status:',r.status);
+    console.log('Read status:',r.status);
     const d=await r.json();
-    console.log('Supabase response:',d);
-    toast('Supabase: '+r.status+(r.ok?' OK':' FOUT'));
+    console.log('Read response:',d);
+    // Test write with tiny payload
+    const tw=await fetch(`${SB_URL}/rest/v1/groups`,{
+      method:'POST',
+      headers:{
+        'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,
+        'Content-Type':'application/json',
+        'Prefer':'resolution=merge-duplicates,return=minimal'
+      },
+      body:JSON.stringify({id:'__test__',data:{id:'__test__',name:'test'}})
+    });
+    let werr='';
+    try{werr=await tw.text();}catch(e){}
+    console.log('Write status:',tw.status,'body:',werr);
+    toast(`R:${r.status} W:${tw.status}`);
   }catch(e){
     console.error('Supabase error:',e);
-    toast('Supabase fout: '+e.message);
+    toast('Fout: '+e.message);
   }
 }
 

@@ -1449,7 +1449,7 @@ function printPost(id, withPhotos){
       const allBounds=[];
       tracks.forEach(t=>{
         if(!t.stats||!t.stats.lats)return;ensureTrackArrays(t);
-        const coords=t.stats.lats.map((la,i)=>[la,t.stats.lngs[i]]);
+        const coords=t.stats.lats.map((la,i)=>[la,t.stats.lngs[i]]).filter(pt=>pt[0]!=null&&pt[1]!=null);
         L.polyline(coords,{color:t.color,weight:3,opacity:.9}).addTo(pm);
         allBounds.push(...coords);
       });
@@ -2384,12 +2384,12 @@ function openFullscreenMap(){
     const allBounds=[];
     tracks.forEach(t=>{
       if(!t.stats||!t.stats.lats)return;ensureTrackArrays(t);
-      const coords=t.stats.lats.map((la,i)=>[la,t.stats.lngs[i]]);
+      const coords=t.stats.lats.map((la,i)=>[la,t.stats.lngs[i]]).filter(pt=>pt[0]!=null&&pt[1]!=null);
       L.polyline(coords,{color:t.color,weight:3.5,opacity:.9}).addTo(fsMap).bindTooltip(esc(t.name),{sticky:true});
       const fsPl=L.polyline(coords,{color:t.color,weight:8,opacity:0}).addTo(fsMap);
 fsPl.on('mousemove',e=>{
   if(!t.stats||!t.stats.elevs||!t.stats.elevs.length) return;
-  const ll=e.latlng;let minD=Infinity,bestI=0;
+  const ll=e.latlng;if(!ll) return;let minD=Infinity,bestI=0;
   coords.forEach((pt,i)=>{const d=Math.pow(pt[0]-ll.lat,2)+Math.pow(pt[1]-ll.lng,2);if(d<minD){minD=d;bestI=i}});
   const elevIdx=Math.round((bestI/(coords.length-1))*(t.stats.elevs.length-1));
   const elev=Math.round(t.stats.elevs[elevIdx]||0);
@@ -2450,7 +2450,7 @@ fsPl.on('mouseout',()=>{
           // Bidirectional: hover on profile -> marker on map
           // Use overlay div instead of canvas events (avoids Leaflet z-index issues)
           if(!t.stats||!t.stats.lats) return;
-          const coords=t.stats.lats.map((la,i)=>[la,t.stats.lngs[i]]);
+          const coords=t.stats.lats.map((la,i)=>[la,t.stats.lngs[i]]).filter(pt=>pt[0]!=null&&pt[1]!=null);
           const wrap=document.getElementById('fswrap-'+t.id);
           if(!wrap) return;
           // Create transparent hover overlay on top of canvas
@@ -2692,13 +2692,13 @@ function initPostSidebar(p){
   const allBounds=[];
   tracks.forEach(t=>{
     if(!t.stats||!t.stats.lats)return;ensureTrackArrays(t);
-    const coords=t.stats.lats.map((la,i)=>[la,t.stats.lngs[i]]);
+    const coords=t.stats.lats.map((la,i)=>[la,t.stats.lngs[i]]).filter(pt=>pt[0]!=null&&pt[1]!=null);
     const sbPl=L.polyline(coords,{color:t.color,weight:8,opacity:0}).addTo(sidebarMap);
     L.polyline(coords,{color:t.color,weight:3,opacity:.9}).addTo(sidebarMap)
       .bindTooltip(esc(t.name),{sticky:true});;
     sbPl.on('mousemove',e=>{
       if(!t.stats||!t.stats.elevs||!t.stats.elevs.length) return;
-      const ll=e.latlng;let minD=Infinity,bestI=0;
+      const ll=e.latlng;if(!ll) return;let minD=Infinity,bestI=0;
       coords.forEach((pt,i)=>{const d=Math.pow(pt[0]-ll.lat,2)+Math.pow(pt[1]-ll.lng,2);if(d<minD){minD=d;bestI=i}});
       const elevIdx=Math.round((bestI/(coords.length-1))*(t.stats.elevs.length-1));
       const elev=Math.round(t.stats.elevs[elevIdx]||0);
@@ -2846,7 +2846,7 @@ async function ensureTrackArrays(t){
 function downsample(arr, maxPoints){
   if(!arr||arr.length<=maxPoints) return arr;
   const step=arr.length/maxPoints;
-  return Array.from({length:maxPoints},(_, i)=>arr[Math.round(i*step)]);
+  return Array.from({length:maxPoints},(_,i)=>arr[Math.min(Math.round(i*step),arr.length-1)]).filter(x=>x!==undefined&&x!==null);
 }
 
 async function sbUpsertRaw(table, id, data){
@@ -3580,7 +3580,7 @@ function rom(){
     </div>`;
     tracks.forEach(t=>{
       if(!t.stats||!t.stats.lats)return;ensureTrackArrays(t);
-      const coords=t.stats.lats.map((la,i)=>[la,t.stats.lngs[i]]);
+      const coords=t.stats.lats.map((la,i)=>[la,t.stats.lngs[i]]).filter(pt=>pt[0]!=null&&pt[1]!=null);
       const poly=L.polyline(coords,{color:col,weight:3.5,opacity:.85}).addTo(om).bindPopup(pop,{maxWidth:240})
         .on('mouseover',function(){this.setStyle({weight:5,opacity:1})})
         .on('mouseout',function(){this.setStyle({weight:3.5,opacity:.85})});
@@ -4028,7 +4028,7 @@ function bpe(){if(typeof L==='undefined'){setTimeout(bpe,200);return;}document.g
     if(linkedPoi){linkedPoi.photoIdx=null;renderPoiList();}
     ppe(si,e.latlng.lat,e.latlng.lng);cpn[si]={lat:e.latlng.lat,lng:e.latlng.lng};rphl();umh()
   });umh()}
-function ret(){etl.forEach(l=>em.removeLayer(l));etl=[];const ab=[];ctr.forEach(t=>{if(!t.stats)return;const c=t.stats.lats.map((lat,i)=>[lat,t.stats.lngs[i]]);etl.push(L.polyline(c,{color:t.color,weight:3,opacity:.9}).addTo(em));ab.push(...c)});if(ab.length)em.fitBounds(L.latLngBounds(ab),{padding:[20,20]});else em.setView([50.85,4.35],8);}
+function ret(){etl.forEach(l=>em.removeLayer(l));etl=[];const ab=[];ctr.forEach(t=>{if(!t.stats)return;const c=t.stats.lats.map((lat,i)=>[lat,t.stats.lngs[i]]).filter(pt=>pt[0]!=null&&pt[1]!=null);etl.push(L.polyline(c,{color:t.color,weight:3,opacity:.9}).addTo(em));ab.push(...c)});if(ab.length)em.fitBounds(L.latLngBounds(ab),{padding:[20,20]});else em.setView([50.85,4.35],8);}
 function repm(){Object.values(epm).forEach(m=>em&&em.removeLayer(m));epm={};Object.entries(cpn).forEach(([idx,ll])=>ppe(parseInt(idx),ll.lat,ll.lng))}
 function ppe(idx,lat,lng){if(epm[idx])em.removeLayer(epm[idx]);const ph=cph[idx];if(!ph)return;const icon=L.divIcon({html:`<div style="width:36px;height:36px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--surface);border:2px solid var(--moss);overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.4)"><img src="${ph.src}" style="width:100%;height:100%;object-fit:cover;transform:rotate(45deg) scale(1.4)"></div>`,iconSize:[36,36],iconAnchor:[18,36],className:''});const m=L.marker([lat,lng],{icon,draggable:true}).addTo(em);m.on('dragend',e=>{const ll=e.target.getLatLng();cpn[idx]={lat:ll.lat,lng:ll.lng}});epm[idx]=m}
 function umh(){const h=document.getElementById('mh2'),top=document.getElementById('pet');if(si!==null){const ph=cph[si];h.textContent=`📌 Klik op de kaart om de pin voor "${ph.name}" te ${cpn[si]?'verplaatsen':'plaatsen'}`;h.className='mh sel';top.innerHTML=`<strong>Pinnen:</strong> ${esc(ph.name)}`}else{h.textContent='Klik op de kaart om een POI te plaatsen, of selecteer eerst een foto voor een fotopin';h.className='mh';top.textContent='Kaart — klik voor POI of fotopin'}}
@@ -4164,7 +4164,7 @@ async function vp(id){
       const r=de2(cv,t.stats.elevs,{labels:true,lineWidth:2,stroke:t.color,fill:t.color+'28',distKm:maxDist});
       // Bidirectional: hover on profile -> marker on sidebar/post map
       if(t.stats&&t.stats.lats){
-        const coords=t.stats.lats.map((la,i)=>[la,t.stats.lngs[i]]);
+        const coords=t.stats.lats.map((la,i)=>[la,t.stats.lngs[i]]).filter(pt=>pt[0]!=null&&pt[1]!=null);
         cv.addEventListener('mousemove',ev=>{
           const rect=cv.getBoundingClientRect();
           const pct=(ev.clientX-rect.left)/rect.width;
@@ -4303,11 +4303,11 @@ function togglePoiCard(bodyId,chevId){
 }
 
 function tib2(bid,cid){const b=document.getElementById(bid),c=document.getElementById(cid);if(!b)return;const o=b.classList.toggle('open');if(c)c.classList.toggle('open',o)}
-function ivm(){if(!mp)return;if(typeof L==='undefined'){setTimeout(ivm,200);return;}const p=mp;setTimeout(()=>{try{if(vm){vm.remove();vm=null}}catch(e){vm=null}vm=mkMap('pmap');const ab=[];(p.tracks||[]).forEach(t=>{if(!t.stats||!t.stats.lats)return;if(!Array.isArray(t.stats.lats))t.stats.lats=Object.values(t.stats.lats);if(!Array.isArray(t.stats.lngs))t.stats.lngs=Object.values(t.stats.lngs);if(t.stats.elevs&&!Array.isArray(t.stats.elevs))t.stats.elevs=Object.values(t.stats.elevs);const c=t.stats.lats.map((lat,i)=>[lat,t.stats.lngs[i]]);L.polyline(c,{color:t.color,weight:3.5,opacity:.9}).addTo(vm).bindTooltip(esc(t.name),{sticky:false});
+function ivm(){if(!mp)return;if(typeof L==='undefined'){setTimeout(ivm,200);return;}const p=mp;setTimeout(()=>{try{if(vm){vm.remove();vm=null}}catch(e){vm=null}vm=mkMap('pmap');const ab=[];(p.tracks||[]).forEach(t=>{if(!t.stats||!t.stats.lats)return;if(!Array.isArray(t.stats.lats))t.stats.lats=Object.values(t.stats.lats);if(!Array.isArray(t.stats.lngs))t.stats.lngs=Object.values(t.stats.lngs);if(t.stats.elevs&&!Array.isArray(t.stats.elevs))t.stats.elevs=Object.values(t.stats.elevs);const c=t.stats.lats.map((lat,i)=>[lat,t.stats.lngs[i]]).filter(pt=>pt[0]!=null&&pt[1]!=null);L.polyline(c,{color:t.color,weight:3.5,opacity:.9}).addTo(vm).bindTooltip(esc(t.name),{sticky:false});
 const vmPl=L.polyline(c,{color:t.color,weight:8,opacity:0}).addTo(vm);
 vmPl.on('mousemove',e=>{
   if(!t.stats||!t.stats.elevs||!t.stats.elevs.length) return;
-  const ll=e.latlng;let minD=Infinity,bestI=0;
+  const ll=e.latlng;if(!ll) return;let minD=Infinity,bestI=0;
   c.forEach((pt,i)=>{const d=Math.pow(pt[0]-ll.lat,2)+Math.pow(pt[1]-ll.lng,2);if(d<minD){minD=d;bestI=i}});
   const elevIdx=Math.round((bestI/(c.length-1))*(t.stats.elevs.length-1));
   const elev=Math.round(t.stats.elevs[elevIdx]||0);

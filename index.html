@@ -876,6 +876,14 @@ body:not(.readonly) .logout-btn{display:flex}
 #fs-elev-panel canvas{display:block;width:100%;height:60px}
 .fs-elev-cursor{position:absolute;top:0;bottom:0;width:2px;background:#f0a500;pointer-events:none;display:none}
 .fs-elev-value{position:absolute;top:0;background:#f0a500;color:#1a0f08;font-size:11px;font-weight:700;padding:1px 5px;border-radius:3px;transform:translateX(-50%);pointer-events:none;font-family:var(--sans);white-space:nowrap;display:none}
+
+/* FULLSCREEN ELEVATION TABS */
+#fs-elev-tabs{display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap}
+.fs-elev-tab{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;font-family:var(--sans);cursor:pointer;border:1.5px solid rgba(255,255,255,.2);color:rgba(240,232,220,.6);background:transparent;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.fs-elev-tab:hover{border-color:rgba(255,255,255,.4);color:rgba(240,232,220,.9)}
+.fs-elev-tab.active{color:#fff;border-color:var(--color)}
+.fs-elev-track-panel{display:none}
+.fs-elev-track-panel.active{display:block}
 </style>
 </head>
 <body>
@@ -2344,6 +2352,16 @@ function setPmapSize(size){
 
 /* FULLSCREEN MAP */
 let fsMap=null;
+
+function switchElevTab(activeId, allIds){
+  allIds.split(',').forEach(id=>{
+    document.getElementById('fstab-'+id)?.classList.toggle('active', id===activeId);
+    document.getElementById('fspanel-'+id)?.classList.toggle('active', id===activeId);
+  });
+  // Hide marker from previous track
+  if(fsElevMarker&&fsMap){fsMap.removeLayer(fsElevMarker);fsElevMarker=null;}
+}
+
 let fsCurrentPost=null;
 let fsElevMarker=null;
 
@@ -2401,19 +2419,28 @@ fsPl.on('mouseout',()=>{
       if(typeof L!=='undefined') L.DomEvent.disableClickPropagation(fsPanel);
       const rawMax=Math.max(...twefs.map(t=>parseFloat(t.stats?.dist||0)));
       const maxDist=Math.ceil(rawMax/5)*5||5;
-      fsTracks.innerHTML=twefs.map(t=>{
+      // Build tabs + panels
+      const tabsHtml=twefs.map((t,i)=>{
         const dist=parseFloat(t.stats?.dist||0);
-        const pct=Math.round((dist/maxDist)*100);
-        return`<div class="fs-elev-track-label">
+        return`<button class="fs-elev-tab ${i===0?'active':''}" id="fstab-${t.id}"
+          style="--color:${t.color}"
+          onclick="switchElevTab('${t.id}','${twefs.map(x=>x.id).join(',')}')">
           <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${t.color}"></span>
           ${esc(t.name)} · ${dist} km
-        </div>
-        <div class="fs-elev-canvas-wrap" style="width:${pct}%;position:relative" id="fswrap-${t.id}">
-          <canvas id="fselv-${t.id}" style="height:60px"></canvas>
-          <div class="fs-elev-cursor" id="fscur-${t.id}"></div>
-          <div class="fs-elev-value" id="fsval-${t.id}"></div>
+        </button>`;
+      }).join('');
+      const panelsHtml=twefs.map((t,i)=>{
+        const dist=parseFloat(t.stats?.dist||0);
+        const pct=Math.round((dist/maxDist)*100);
+        return`<div class="fs-elev-track-panel ${i===0?'active':''}" id="fspanel-${t.id}">
+          <div class="fs-elev-canvas-wrap" style="width:${pct}%;position:relative" id="fswrap-${t.id}">
+            <canvas id="fselv-${t.id}" style="height:60px"></canvas>
+            <div class="fs-elev-cursor" id="fscur-${t.id}"></div>
+            <div class="fs-elev-value" id="fsval-${t.id}"></div>
+          </div>
         </div>`;
       }).join('');
+      fsTracks.innerHTML=`<div id="fs-elev-tabs">${tabsHtml}</div>${panelsHtml}`;
       setTimeout(()=>{
         twefs.forEach(t=>{
           const cv=document.getElementById('fselv-'+t.id);

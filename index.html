@@ -218,6 +218,46 @@ nav{background:var(--nav-bg);border-bottom:3px solid var(--nav-border);padding:0
 .tnte{width:100%;padding:6px 9px;border:1px solid var(--border);border-radius:5px;font-size:12px;font-family:var(--body);background:var(--input-bg);color:var(--ink);outline:none;resize:vertical;min-height:48px;line-height:1.5}
 .atln{font-size:12px;color:var(--blue);background:none;border:1px dashed var(--border);border-radius:5px;padding:5px 10px;cursor:pointer;font-family:var(--sans);margin-top:2px;transition:all .15s}
 .atln:hover{border-color:var(--blue);background:var(--blue-bg)}
+
+function showElevMarker(trackId, pointIdx, totalPoints, elev){
+  // Draw a vertical line on the elevation profile canvas
+  const eco=document.querySelector(`#elv-${trackId}`)?.closest('.eco');
+  if(!eco) return;
+  let marker=document.getElementById('em-'+trackId);
+  if(!marker){
+    marker=document.createElement('div');
+    marker.id='em-'+trackId;
+    marker.className='elev-marker-line';
+    eco.style.position='relative';
+    eco.appendChild(marker);
+  }
+  const pct=(pointIdx/(totalPoints-1))*100;
+  const canvas=document.getElementById('elv-'+trackId);
+  if(canvas){
+    marker.style.left=pct+'%';
+    marker.style.background=marker.style.background||'#f0a500';
+    marker.style.display='block';
+    // Show elevation label
+    let lbl=document.getElementById('eml-'+trackId);
+    if(!lbl){
+      lbl=document.createElement('div');
+      lbl.id='eml-'+trackId;
+      lbl.style.cssText='position:absolute;top:0;font-size:10px;font-weight:700;color:var(--ink);background:var(--surface);padding:1px 4px;border-radius:3px;transform:translateX(-50%);pointer-events:none;white-space:nowrap;font-family:var(--sans)';
+      eco.appendChild(lbl);
+    }
+    lbl.style.left=pct+'%';
+    lbl.textContent=elev+'m';
+    lbl.style.display='block';
+  }
+}
+
+function hideElevMarker(trackId){
+  const m=document.getElementById('em-'+trackId);
+  const l=document.getElementById('eml-'+trackId);
+  if(m) m.style.display='none';
+  if(l) l.style.display='none';
+}
+
 /* POST VIEW */
 .bb{display:inline-flex;align-items:center;gap:5px;color:var(--muted);font-size:13px;cursor:pointer;background:none;border:none;font-family:var(--sans);padding:0;margin-bottom:1.25rem}
 .bb:hover{color:var(--moss)}
@@ -851,6 +891,13 @@ body:not(.readonly) .login-btn{display:none}
 /* Logout button only when logged in */
 .logout-btn{display:none}
 body:not(.readonly) .logout-btn{display:flex}
+
+/* ELEVATION TOOLTIP */
+.elev-tooltip{position:absolute;background:var(--ink);color:var(--bg);padding:4px 10px;border-radius:6px;font-size:12px;font-family:var(--sans);font-weight:600;pointer-events:none;white-space:nowrap;z-index:1000;box-shadow:0 2px 8px rgba(0,0,0,.3);transform:translate(-50%,-110%)}
+.elev-crosshair{position:absolute;width:10px;height:10px;border-radius:50%;border:2px solid #fff;transform:translate(-50%,-50%);pointer-events:none;z-index:1001;box-shadow:0 0 0 2px rgba(0,0,0,.4)}
+.elev-marker-line{position:absolute;width:2px;top:0;bottom:0;pointer-events:none;z-index:5;opacity:.8;background:#f0a500}
+.leaflet-tooltip.elev-map-tip{background:var(--ink);color:#fff;border:none;border-radius:6px;font-size:12px;font-family:var(--sans);padding:4px 10px;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.leaflet-tooltip.elev-map-tip::before{border-top-color:var(--ink)}
 </style>
 </head>
 <body>
@@ -2552,8 +2599,19 @@ function initPostSidebar(p){
   tracks.forEach(t=>{
     if(!t.stats||!t.stats.lats)return;
     const coords=t.stats.lats.map((la,i)=>[la,t.stats.lngs[i]]);
+    const sbPl=L.polyline(coords,{color:t.color,weight:8,opacity:0}).addTo(sidebarMap);
     L.polyline(coords,{color:t.color,weight:3,opacity:.9}).addTo(sidebarMap)
-      .bindTooltip(esc(t.name),{sticky:true});
+      .bindTooltip(esc(t.name),{sticky:true});;
+    sbPl.on('mousemove',e=>{
+      if(!t.stats||!t.stats.elevs) return;
+      const ll=e.latlng;let minD=Infinity,bestI=0;
+      coords.forEach((pt,i)=>{const d=Math.pow(pt[0]-ll.lat,2)+Math.pow(pt[1]-ll.lng,2);if(d<minD){minD=d;bestI=i}});
+      const elev=Math.round(t.stats.elevs[bestI]||0);
+      const dist=((bestI/(coords.length-1))*parseFloat(t.stats.dist||0)).toFixed(1);
+      sbPl.bindTooltip(`<strong>${elev}m</strong> · ${dist} km`,{sticky:true,className:'elev-map-tip'}).openTooltip(e.latlng);
+      showElevMarker(t.id,bestI,coords.length,elev);
+    });
+    sbPl.on('mouseout',()=>{sbPl.closeTooltip();hideElevMarker(t.id)});
     allBounds.push(...coords);
     const dot=c=>L.divIcon({html:`<div style="background:${c};width:8px;height:8px;border-radius:50%;border:2px solid rgba(255,255,255,.8)"></div>`,iconSize:[8,8],className:''});
     L.marker(coords[0],{icon:dot(t.color)}).addTo(sidebarMap);
@@ -3761,7 +3819,25 @@ function togglePoiCard(bodyId,chevId){
 }
 
 function tib2(bid,cid){const b=document.getElementById(bid),c=document.getElementById(cid);if(!b)return;const o=b.classList.toggle('open');if(c)c.classList.toggle('open',o)}
-function ivm(){if(!mp)return;if(typeof L==='undefined'){setTimeout(ivm,200);return;}const p=mp;setTimeout(()=>{if(vm){vm.remove();vm=null}vm=mkMap('pmap');const ab=[];(p.tracks||[]).forEach(t=>{if(!t.stats||!t.stats.lats)return;const c=t.stats.lats.map((lat,i)=>[lat,t.stats.lngs[i]]);L.polyline(c,{color:t.color,weight:3.5,opacity:.9}).addTo(vm).bindTooltip(esc(t.name),{sticky:true});ab.push(...c);const di=col=>L.divIcon({html:`<div style="background:${col};width:10px;height:10px;border-radius:50%;border:2px solid rgba(255,255,255,.8);box-shadow:0 1px 4px rgba(0,0,0,.5)"></div>`,iconSize:[10,10],className:''});L.marker(c[0],{icon:di(t.color)}).addTo(vm).bindPopup(`Start: ${esc(t.name)}`);L.marker(c[c.length-1],{icon:di('#e05050')}).addTo(vm).bindPopup(`Einde: ${esc(t.name)}`)});// Add connection coords to bounds
+function ivm(){if(!mp)return;if(typeof L==='undefined'){setTimeout(ivm,200);return;}const p=mp;setTimeout(()=>{if(vm){vm.remove();vm=null}vm=mkMap('pmap');const ab=[];(p.tracks||[]).forEach(t=>{if(!t.stats||!t.stats.lats)return;const c=t.stats.lats.map((lat,i)=>[lat,t.stats.lngs[i]]);const pl=L.polyline(c,{color:t.color,weight:8,opacity:0}).addTo(vm); // invisible wide hit zone
+L.polyline(c,{color:t.color,weight:3.5,opacity:.9}).addTo(vm).bindTooltip(esc(t.name),{sticky:false});
+pl.on('mousemove',e=>{
+  if(!t.stats||!t.stats.elevs) return;
+  // Find closest point on track
+  const ll=e.latlng;
+  let minD=Infinity,bestI=0;
+  c.forEach((pt,i)=>{
+    const d=Math.pow(pt[0]-ll.lat,2)+Math.pow(pt[1]-ll.lng,2);
+    if(d<minD){minD=d;bestI=i}
+  });
+  const elev=Math.round(t.stats.elevs[bestI]||0);
+  const dist=((bestI/(c.length-1))*parseFloat(t.stats.dist||0)).toFixed(1);
+  // Show tooltip on map
+  pl.bindTooltip(`<strong>${elev}m</strong> <span style="font-weight:400;opacity:.8">· ${dist} km</span>`,{sticky:true,className:'elev-map-tip'}).openTooltip(e.latlng);
+  // Show marker on elevation profile
+  showElevMarker(t.id, bestI, c.length, elev);
+});
+pl.on('mouseout',()=>{pl.closeTooltip();hideElevMarker(t.id)});ab.push(...c);const di=col=>L.divIcon({html:`<div style="background:${col};width:10px;height:10px;border-radius:50%;border:2px solid rgba(255,255,255,.8);box-shadow:0 1px 4px rgba(0,0,0,.5)"></div>`,iconSize:[10,10],className:''});L.marker(c[0],{icon:di(t.color)}).addTo(vm).bindPopup(`Start: ${esc(t.name)}`);L.marker(c[c.length-1],{icon:di('#e05050')}).addTo(vm).bindPopup(`Einde: ${esc(t.name)}`)});// Add connection coords to bounds
 (p.connections||[]).forEach(c=>{if(c.fromCoord)ab.push([c.fromCoord.lat,c.fromCoord.lng]);if(c.toCoord)ab.push([c.toCoord.lat,c.toCoord.lng])});
 if(ab.length)vm.fitBounds(L.latLngBounds(ab),{padding:[24,24]});if(p.pins&&p.photos){Object.entries(p.pins).forEach(([idx,latlng])=>{const ph=p.photos[parseInt(idx)];if(!ph)return;const cap=ph.caption||'';const icon=L.divIcon({html:`<div style="width:40px;height:40px;border-radius:50%;background:#222;border:3px solid #7aaa50;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.5)"><img src="${ph.src}" style="width:100%;height:100%;object-fit:cover;display:block"></div>`,iconSize:[44,44],iconAnchor:[22,22],popupAnchor:[0,-28],className:''});L.marker([latlng.lat,latlng.lng],{icon}).addTo(vm).bindPopup(`<div class="ppop"><img src="${ph.src}" onclick="olb('${ph.src}','${esc(cap)}')">${cap?`<div class="ppop-cap">${esc(cap)}</div>`:''}<button onclick="olb('${ph.src}','${esc(cap)}')" style="width:100%;padding:5px 8px;background:var(--moss);color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-family:var(--sans);margin-top:6px">🔍 Volledig scherm</button></div>`,{maxWidth:240})})}(p.connections||[]).forEach(c=>drawConnOnMap(vm,c));
     (p.pois||[]).forEach((poi,i)=>{poi._photos=p.photos;addPoiMarkerToMap(vm,poi,i+1,false)});

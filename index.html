@@ -2790,7 +2790,9 @@ function sbHeaders(write=false){
 
 async function sbSelect(table){
   try{
-    const r=await fetch(`${SB_URL}/rest/v1/${table}?select=*`,{headers:sbHeaders()});
+    const r=await fetch(`${SB_URL}/rest/v1/${table}?select=*&order=id`,{
+      headers:{...sbHeaders(),'Cache-Control':'no-cache'}
+    });
     if(!r.ok) return [];
     const rows=await r.json();
     return rows.map(row=>row.data);
@@ -2820,10 +2822,18 @@ async function sbUpsert(table, item){
 
 async function sbDelete(table, id){
   try{
-    const r=await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`,{
+    const r=await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`,{
       method:'DELETE',
-      headers:sbHeaders()
+      headers:{
+        'apikey':SB_KEY,
+        'Authorization':'Bearer '+SB_KEY,
+        'Content-Type':'application/json'
+      }
     });
+    if(!r.ok){
+      const err=await r.text();
+      console.warn('Supabase delete failed:',table,id,r.status,err);
+    }
     return r.ok;
   }catch(e){console.warn('Supabase delete error:',e);return false;}
 }
@@ -2866,10 +2876,33 @@ async function loadFromSupabase(){
     ]);
     if(p.length||g.length||pe.length||v.length){
       posts=p; groups=g; persons=pe; vacations=v;
+      // Sync IndexedDB to match Supabase (removes deleted items from local cache)
+      await syncIDBFromSupabase();
       return true;
     }
     return false;
   }catch(e){console.warn('Supabase load failed:',e);return false;}
+}
+
+async function syncIDBFromSupabase(){
+  // Clear and repopulate each store from Supabase data
+  try{
+    for(const store of ['posts','groups','persons','vacations']){
+      const arr=store==='posts'?posts:store==='groups'?groups:store==='persons'?persons:vacations;
+      // Get all local IDs
+      const localItems=await dga(store);
+      const remoteIds=new Set(arr.map(x=>x.id));
+      // Delete items that no longer exist in Supabase
+      for(const item of localItems){
+        if(!remoteIds.has(item.id)) await new Promise((r)=>{
+          const t=db.transaction(store,'readwrite');
+          t.objectStore(store).delete(item.id).onsuccess=r;
+        });
+      }
+      // Upsert all Supabase items to local
+      for(const item of arr) await dpu(store,item);
+    }
+  }catch(e){console.warn('IDB sync error:',e);}
 }
 
 async function syncAllToSupabase(){
@@ -3521,7 +3554,21 @@ async function sp(){
   }
   refreshSidebar();
 }
-async function dp2(id){if(!confirm('Post verwijderen?'))return;posts=posts.filter(p=>p.id!==id);await dde('posts',id);if(isLoggedIn)await sbDelete('posts',id);ex.delete(id);rf();toast('Verwijderd');refreshSidebar()}
+async function dp2(id){
+  if(!confirm('Post verwijderen?')) return;
+  posts=posts.filter(p=>p.id!==id);
+  await dde('posts',id);
+  if(isLoggedIn){
+    const ok=await sbDelete('posts',id);
+    console.log('Supabase delete result:', ok);
+    if(!ok) toast('⚠ Supabase delete mislukt — klik ☁ om te synchroniseren');
+  }
+  ex.delete(id);
+  rf();
+  if(isLoggedIn) syncAllToSupabase();
+  toast('Post verwijderd');
+  refreshSidebar();
+}
 function rgp(){const p=document.getElementById('gp2');if(!groups.length){p.innerHTML=`<span class="gce">Nog geen groepen.</span>`;return}p.innerHTML=groups.map(g=>`<span class="gc ${cg.includes(g.id)?'sel':''}" onclick="tg('${g.id}')">${esc(g.name)}</span>`).join('')}
 function tg(id){if(cg.includes(id))cg=cg.filter(x=>x!==id);else cg.push(id);rgp()}
 function dov(e,id){e.preventDefault();document.getElementById(id).classList.add('dragover')}

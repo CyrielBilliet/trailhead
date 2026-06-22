@@ -866,7 +866,6 @@ body:not(.readonly) .logout-btn{display:flex}
     <button class="btn btn-primary edit-only" onclick="showEd()">+ New Post</button>
     <button class="btn btn-ghost login-btn" onclick="showLogin()">🔒 Inloggen</button>
     <button class="btn btn-ghost logout-btn edit-only" onclick="syncAllToSupabase()" title="Synchroniseer met cloud">☁</button>
-    <button class="btn btn-ghost logout-btn edit-only" onclick="testSupabase()" title="Test verbinding" style="font-size:11px">🔌 Test</button>
     <button class="btn btn-ghost logout-btn" onclick="doLogout()" title="Uitloggen">🔓</button>
     <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(this)">
     <div class="gear-wrap" id="gear-wrap">
@@ -2734,6 +2733,8 @@ async function testSupabase(){
     let werr='';
     try{werr=await tw.text();}catch(e){}
     console.log('Write status:',tw.status,'body:',werr);
+    // Clean up test item
+    fetch(`${SB_URL}/rest/v1/groups?id=eq.__test__`,{method:'DELETE',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}}).catch(()=>{});
     toast(`R:${r.status} W:${tw.status}`);
   }catch(e){
     console.error('Supabase error:',e);
@@ -3410,7 +3411,7 @@ function dov(e,id){e.preventDefault();document.getElementById(id).classList.add(
 function dlv(id){document.getElementById(id).classList.remove('dragover')}
 function dg(e){e.preventDefault();dlv('gz');lgf(e.dataTransfer.files)}
 function dp(e){e.preventDefault();dlv('pz');lp(e.dataTransfer.files)}
-function lgf(files){[...files].forEach(file=>{const r=new FileReader();r.onload=e=>{const i=ctr.length;ctr.push({id:Date.now().toString()+i,name:file.name.replace(/\.gpx$/i,''),gpx:e.target.result,stats:pgs(e.target.result),color:TC[i%TC.length]});rtl();mbpe()};r.readAsText(file)})}
+function lgf(files){[...files].forEach(file=>{const r=new FileReader();r.onload=e=>{const i=ctr.length;ctr.push({id:Date.now().toString()+i,name:file.name.replace(/\.gpx$/i,''),gpx:e.target.result,stats:pgs(e.target.result),color:TC[i%TC.length]});rtl();mbpe();if(em)ret()};r.readAsText(file)})}
 function pgs(xml){try{const doc=new DOMParser().parseFromString(xml,'text/xml');const pts=[...doc.querySelectorAll('trkpt')];if(!pts.length)return null;let dist=0,eg=0,el=0;const la=[],ln=[],ae=[];pts.forEach((p,i)=>{const lat=parseFloat(p.getAttribute('lat')),lng=parseFloat(p.getAttribute('lon')),e=parseFloat(p.querySelector('ele')?.textContent||0);la.push(lat);ln.push(lng);ae.push(e);if(i>0){const R=6371000,f1=la[i-1]*Math.PI/180,f2=lat*Math.PI/180,df=(lat-la[i-1])*Math.PI/180,dl=(lng-ln[i-1])*Math.PI/180;const a=Math.sin(df/2)**2+Math.cos(f1)*Math.cos(f2)*Math.sin(dl/2)**2;dist+=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));const de=e-ae[i-1];if(de>0)eg+=de;else el+=Math.abs(de)}});return{dist:(dist/1000).toFixed(1),elevGain:Math.round(eg),elevLoss:Math.round(el),points:pts.length,lats:la,lngs:ln,elevs:ds(ae,500)}}catch(e){return null}}
 function ds(arr,max){if(arr.length<=max)return arr;const r=[],step=(arr.length-1)/(max-1);for(let i=0;i<max;i++)r.push(arr[Math.round(i*step)]);return r}
 function rmt(id){ctr=ctr.filter(t=>t.id!==id);ctr.forEach((t,i)=>t.color=TC[i%TC.length]);rtl();if(em)ret();if(!ctr.length)document.getElementById('pe2').style.display='none'}

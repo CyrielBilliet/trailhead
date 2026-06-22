@@ -219,45 +219,6 @@ nav{background:var(--nav-bg);border-bottom:3px solid var(--nav-border);padding:0
 .atln{font-size:12px;color:var(--blue);background:none;border:1px dashed var(--border);border-radius:5px;padding:5px 10px;cursor:pointer;font-family:var(--sans);margin-top:2px;transition:all .15s}
 .atln:hover{border-color:var(--blue);background:var(--blue-bg)}
 
-function showElevMarker(trackId, pointIdx, totalPoints, elev){
-  // Draw a vertical line on the elevation profile canvas
-  const eco=document.querySelector(`#elv-${trackId}`)?.closest('.eco');
-  if(!eco) return;
-  let marker=document.getElementById('em-'+trackId);
-  if(!marker){
-    marker=document.createElement('div');
-    marker.id='em-'+trackId;
-    marker.className='elev-marker-line';
-    eco.style.position='relative';
-    eco.appendChild(marker);
-  }
-  const pct=(pointIdx/(totalPoints-1))*100;
-  const canvas=document.getElementById('elv-'+trackId);
-  if(canvas){
-    marker.style.left=pct+'%';
-    marker.style.background=marker.style.background||'#f0a500';
-    marker.style.display='block';
-    // Show elevation label
-    let lbl=document.getElementById('eml-'+trackId);
-    if(!lbl){
-      lbl=document.createElement('div');
-      lbl.id='eml-'+trackId;
-      lbl.style.cssText='position:absolute;top:0;font-size:10px;font-weight:700;color:var(--ink);background:var(--surface);padding:1px 4px;border-radius:3px;transform:translateX(-50%);pointer-events:none;white-space:nowrap;font-family:var(--sans)';
-      eco.appendChild(lbl);
-    }
-    lbl.style.left=pct+'%';
-    lbl.textContent=elev+'m';
-    lbl.style.display='block';
-  }
-}
-
-function hideElevMarker(trackId){
-  const m=document.getElementById('em-'+trackId);
-  const l=document.getElementById('eml-'+trackId);
-  if(m) m.style.display='none';
-  if(l) l.style.display='none';
-}
-
 /* POST VIEW */
 .bb{display:inline-flex;align-items:center;gap:5px;color:var(--muted);font-size:13px;cursor:pointer;background:none;border:none;font-family:var(--sans);padding:0;margin-bottom:1.25rem}
 .bb:hover{color:var(--moss)}
@@ -898,6 +859,15 @@ body:not(.readonly) .logout-btn{display:flex}
 .elev-marker-line{position:absolute;width:2px;top:0;bottom:0;pointer-events:none;z-index:5;opacity:.8;background:#f0a500}
 .leaflet-tooltip.elev-map-tip{background:var(--ink);color:#fff;border:none;border-radius:6px;font-size:12px;font-family:var(--sans);padding:4px 10px;box-shadow:0 2px 8px rgba(0,0,0,.3)}
 .leaflet-tooltip.elev-map-tip::before{border-top-color:var(--ink)}
+
+/* FULLSCREEN ELEVATION PANEL */
+#fs-elev-panel{position:absolute;bottom:0;left:0;right:0;background:rgba(15,10,5,.85);backdrop-filter:blur(4px);padding:10px 16px 8px;z-index:1000;display:none;border-top:1px solid rgba(255,255,255,.1)}
+#fs-elev-panel.visible{display:block}
+.fs-elev-track-label{font-size:11px;color:rgba(240,232,220,.7);font-family:var(--sans);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.fs-elev-canvas-wrap{position:relative}
+#fs-elev-panel canvas{display:block;width:100%;height:60px}
+.fs-elev-cursor{position:absolute;top:0;bottom:0;width:2px;background:#f0a500;pointer-events:none;display:none}
+.fs-elev-value{position:absolute;top:0;background:#f0a500;color:#1a0f08;font-size:11px;font-weight:700;padding:1px 5px;border-radius:3px;transform:translateX(-50%);pointer-events:none;font-family:var(--sans);white-space:nowrap;display:none}
 </style>
 </head>
 <body>
@@ -2367,6 +2337,7 @@ function setPmapSize(size){
 /* FULLSCREEN MAP */
 let fsMap=null;
 let fsCurrentPost=null;
+let fsElevMarker=null;
 
 function openFullscreenMap(){
   const p=posts.find(x=>x.id===currentPostId);
@@ -2388,6 +2359,24 @@ function openFullscreenMap(){
       if(!t.stats||!t.stats.lats)return;
       const coords=t.stats.lats.map((la,i)=>[la,t.stats.lngs[i]]);
       L.polyline(coords,{color:t.color,weight:3.5,opacity:.9}).addTo(fsMap).bindTooltip(esc(t.name),{sticky:true});
+      const fsPl=L.polyline(coords,{color:t.color,weight:8,opacity:0}).addTo(fsMap);
+fsPl.on('mousemove',e=>{
+  if(!t.stats||!t.stats.elevs||!t.stats.elevs.length) return;
+  const ll=e.latlng;let minD=Infinity,bestI=0;
+  coords.forEach((pt,i)=>{const d=Math.pow(pt[0]-ll.lat,2)+Math.pow(pt[1]-ll.lng,2);if(d<minD){minD=d;bestI=i}});
+  const elevIdx=Math.round((bestI/(coords.length-1))*(t.stats.elevs.length-1));
+  const elev=Math.round(t.stats.elevs[elevIdx]||0);
+  const dist=((bestI/(coords.length-1))*parseFloat(t.stats.dist||0)).toFixed(1);
+  fsPl.bindTooltip(`<strong>${elev}m</strong> · ${dist} km`,{sticky:true,className:'elev-map-tip'}).openTooltip(e.latlng);
+  showElevMarker(t.id,elevIdx,t.stats.elevs.length,elev);
+});
+fsPl.on('mouseout',()=>{
+  fsPl.closeTooltip();hideElevMarker(t.id);
+  const cur=document.getElementById('fscur-'+t.id);
+  const val=document.getElementById('fsval-'+t.id);
+  if(cur) cur.style.display='none';
+  if(val) val.style.display='none';
+});
       allBounds.push(...coords);
       const dot=c=>L.divIcon({html:`<div style="background:${c};width:10px;height:10px;border-radius:50%;border:2px solid rgba(255,255,255,.9);box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>`,iconSize:[10,10],className:''});
       L.marker(coords[0],{icon:dot(t.color)}).addTo(fsMap).bindPopup(`Start: ${esc(t.name)}`);
@@ -2395,6 +2384,75 @@ function openFullscreenMap(){
     });
     // Connections
     (p.connections||[]).forEach(c=>drawConnOnMap(fsMap,c));
+    // Elevation panel
+    const fsPanel=document.getElementById('fs-elev-panel');
+    const fsTracks=document.getElementById('fs-elev-tracks');
+    const twefs=tracks.filter(t=>t.stats&&t.stats.elevs&&t.stats.elevs.length);
+    if(twefs.length&&fsPanel&&fsTracks){
+      fsPanel.classList.add('visible');
+      if(typeof L!=='undefined') L.DomEvent.disableClickPropagation(fsPanel);
+      const rawMax=Math.max(...twefs.map(t=>parseFloat(t.stats?.dist||0)));
+      const maxDist=Math.ceil(rawMax/5)*5||5;
+      fsTracks.innerHTML=twefs.map(t=>{
+        const dist=parseFloat(t.stats?.dist||0);
+        const pct=Math.round((dist/maxDist)*100);
+        return`<div class="fs-elev-track-label">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${t.color}"></span>
+          ${esc(t.name)} · ${dist} km
+        </div>
+        <div class="fs-elev-canvas-wrap" style="width:${pct}%;position:relative" id="fswrap-${t.id}">
+          <canvas id="fselv-${t.id}" style="height:60px"></canvas>
+          <div class="fs-elev-cursor" id="fscur-${t.id}"></div>
+          <div class="fs-elev-value" id="fsval-${t.id}"></div>
+        </div>`;
+      }).join('');
+      setTimeout(()=>{
+        twefs.forEach(t=>{
+          const cv=document.getElementById('fselv-'+t.id);
+          if(!cv) return;
+          de2(cv,t.stats.elevs,{lineWidth:1.5,stroke:t.color,fill:t.color+'33',distKm:maxDist});
+          // Bidirectional: hover on profile -> marker on map
+          // Use overlay div instead of canvas events (avoids Leaflet z-index issues)
+          if(!t.stats||!t.stats.lats) return;
+          const coords=t.stats.lats.map((la,i)=>[la,t.stats.lngs[i]]);
+          const wrap=document.getElementById('fswrap-'+t.id);
+          if(!wrap) return;
+          // Create transparent hover overlay on top of canvas
+          const ovl=document.createElement('div');
+          ovl.style.cssText='position:absolute;inset:0;z-index:10;cursor:crosshair';
+          wrap.appendChild(ovl);
+          ovl.addEventListener('mousemove',e=>{
+            const rect=ovl.getBoundingClientRect();
+            if(!rect.width) return;
+            const pct=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
+            const elevIdx=Math.round(pct*(t.stats.elevs.length-1));
+            const coordIdx=Math.round(pct*(coords.length-1));
+            const elev=Math.round(t.stats.elevs[Math.max(0,Math.min(elevIdx,t.stats.elevs.length-1))]||0);
+            const ll=coords[Math.max(0,Math.min(coordIdx,coords.length-1))];
+            // Update cursor on profile
+            const cur=document.getElementById('fscur-'+t.id);
+            const val=document.getElementById('fsval-'+t.id);
+            if(cur){cur.style.left=(pct*100)+'%';cur.style.display='block';}
+            if(val){val.style.left=(pct*100)+'%';val.textContent=elev+'m';val.style.display='block';}
+            // Show marker on fsMap
+            if(!ll||!fsMap||typeof L==='undefined') return;
+            const icon=L.divIcon({html:`<div style="width:14px;height:14px;border-radius:50%;background:${t.color};border:3px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.5)"></div>`,iconSize:[14,14],iconAnchor:[7,7],className:''});
+            if(fsElevMarker) fsMap.removeLayer(fsElevMarker);
+            fsElevMarker=L.marker(ll,{icon,interactive:false}).addTo(fsMap);
+          });
+          ovl.addEventListener('mouseout',()=>{
+            const cur=document.getElementById('fscur-'+t.id);
+            const val=document.getElementById('fsval-'+t.id);
+            if(cur) cur.style.display='none';
+            if(val) val.style.display='none';
+            if(fsElevMarker&&fsMap){fsMap.removeLayer(fsElevMarker);fsElevMarker=null;}
+          });
+        });
+      },100);
+    } else if(fsPanel){
+      fsPanel.classList.remove('visible');
+    }
+
     // POIs
     (p.pois||[]).forEach((poi,i)=>{poi._photos=p.photos;addPoiMarkerToMap(fsMap,poi,i+1,false)});
     // Photo pins
@@ -3655,6 +3713,57 @@ function repm(){Object.values(epm).forEach(m=>em&&em.removeLayer(m));epm={};Obje
 function ppe(idx,lat,lng){if(epm[idx])em.removeLayer(epm[idx]);const ph=cph[idx];if(!ph)return;const icon=L.divIcon({html:`<div style="width:36px;height:36px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--surface);border:2px solid var(--moss);overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.4)"><img src="${ph.src}" style="width:100%;height:100%;object-fit:cover;transform:rotate(45deg) scale(1.4)"></div>`,iconSize:[36,36],iconAnchor:[18,36],className:''});const m=L.marker([lat,lng],{icon,draggable:true}).addTo(em);m.on('dragend',e=>{const ll=e.target.getLatLng();cpn[idx]={lat:ll.lat,lng:ll.lng}});epm[idx]=m}
 function umh(){const h=document.getElementById('mh2'),top=document.getElementById('pet');if(si!==null){const ph=cph[si];h.textContent=`📌 Klik op de kaart om de pin voor "${ph.name}" te ${cpn[si]?'verplaatsen':'plaatsen'}`;h.className='mh sel';top.innerHTML=`<strong>Pinnen:</strong> ${esc(ph.name)}`}else{h.textContent='Klik op de kaart om een POI te plaatsen, of selecteer eerst een foto voor een fotopin';h.className='mh';top.textContent='Kaart — klik voor POI of fotopin'}}
 
+function showElevMarker(trackId, pointIdx, totalPoints, elev){
+  // Works for both sidebar canvas (#elv-ID) and fullscreen canvas (#fselv-ID)
+  const sideCanvas=document.getElementById('elv-'+trackId);
+  const fsCanvas=document.getElementById('fselv-'+trackId);
+  const pct=(pointIdx/(totalPoints-1))*100;
+
+  // Sidebar profile marker
+  if(sideCanvas){
+    const eco=sideCanvas.closest('.eco');
+    if(eco){
+      let marker=document.getElementById('em-'+trackId);
+      if(!marker){
+        marker=document.createElement('div');
+        marker.id='em-'+trackId;
+        marker.className='elev-marker-line';
+        eco.style.position='relative';
+        eco.appendChild(marker);
+      }
+      marker.style.left=pct+'%';
+      marker.style.display='block';
+      let lbl=document.getElementById('eml-'+trackId);
+      if(!lbl){
+        lbl=document.createElement('div');
+        lbl.id='eml-'+trackId;
+        lbl.style.cssText='position:absolute;top:0;font-size:10px;font-weight:700;color:var(--ink);background:var(--surface);padding:1px 4px;border-radius:3px;transform:translateX(-50%);pointer-events:none;white-space:nowrap;font-family:var(--sans)';
+        eco.appendChild(lbl);
+      }
+      lbl.style.left=pct+'%';
+      lbl.textContent=elev+'m';
+      lbl.style.display='block';
+    }
+  }
+
+  // Fullscreen profile cursor
+  const fscur=document.getElementById('fscur-'+trackId);
+  const fsval=document.getElementById('fsval-'+trackId);
+  if(fscur){fscur.style.left=pct+'%';fscur.style.display='block';}
+  if(fsval){fsval.style.left=pct+'%';fsval.textContent=elev+'m';fsval.style.display='block';}
+}
+
+function hideElevMarker(trackId){
+  const m=document.getElementById('em-'+trackId);
+  const l=document.getElementById('eml-'+trackId);
+  if(m) m.style.display='none';
+  if(l) l.style.display='none';
+  const fscur=document.getElementById('fscur-'+trackId);
+  const fsval=document.getElementById('fsval-'+trackId);
+  if(fscur) fscur.style.display='none';
+  if(fsval) fsval.style.display='none';
+}
+
 /* POST VIEW */
 let currentPostId=null;
 let viewPoiMarkers={}; // poi.id -> [L.Marker] (on post/sidebar map)
@@ -3707,6 +3816,33 @@ function vp(id){
       const cv=document.getElementById('elv-'+t.id);if(!cv)return;
       const dist=parseFloat(t.stats?.dist||0);
       const r=de2(cv,t.stats.elevs,{labels:true,lineWidth:2,stroke:t.color,fill:t.color+'28',distKm:maxDist});
+      // Bidirectional: hover on profile -> marker on sidebar/post map
+      if(t.stats&&t.stats.lats){
+        const coords=t.stats.lats.map((la,i)=>[la,t.stats.lngs[i]]);
+        cv.addEventListener('mousemove',ev=>{
+          const rect=cv.getBoundingClientRect();
+          const pct=(ev.clientX-rect.left)/rect.width;
+          const elevIdx=Math.round(pct*(t.stats.elevs.length-1));
+          const coordIdx=Math.round(pct*(coords.length-1));
+          const elev=Math.round(t.stats.elevs[Math.max(0,Math.min(elevIdx,t.stats.elevs.length-1))]||0);
+          const ll=coords[Math.max(0,Math.min(coordIdx,coords.length-1))];
+          if(!ll) return;
+          showElevMarker(t.id,elevIdx,t.stats.elevs.length,elev);
+          // Show on whichever map is active
+          const activeMap=sidebarMap||vm;
+          if(activeMap&&typeof L!=='undefined'){
+            const icon=L.divIcon({html:`<div style="width:14px;height:14px;border-radius:50%;background:${t.color};border:3px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.5)"></div>`,iconSize:[14,14],iconAnchor:[7,7],className:''});
+            if(!cv._elevMarker) cv._elevMarker=null;
+            if(cv._elevMarker) activeMap.removeLayer(cv._elevMarker);
+            cv._elevMarker=L.marker(ll,{icon,interactive:false}).addTo(activeMap);
+          }
+        });
+        cv.addEventListener('mouseout',()=>{
+          hideElevMarker(t.id);
+          const activeMap=sidebarMap||vm;
+          if(cv._elevMarker&&activeMap){activeMap.removeLayer(cv._elevMarker);cv._elevMarker=null;}
+        });
+      }
       if(r){
         const mid=Math.round((r.mn+r.mx)/2);
         const yl=document.getElementById('eyl-'+t.id);
@@ -3820,8 +3956,19 @@ function togglePoiCard(bodyId,chevId){
 }
 
 function tib2(bid,cid){const b=document.getElementById(bid),c=document.getElementById(cid);if(!b)return;const o=b.classList.toggle('open');if(c)c.classList.toggle('open',o)}
-function ivm(){if(!mp)return;if(typeof L==='undefined'){setTimeout(ivm,200);return;}const p=mp;setTimeout(()=>{if(vm){vm.remove();vm=null}vm=mkMap('pmap');const ab=[];(p.tracks||[]).forEach(t=>{if(!t.stats||!t.stats.lats)return;const c=t.stats.lats.map((lat,i)=>[lat,t.stats.lngs[i]]);const pl=L.polyline(c,{color:t.color,weight:8,opacity:0}).addTo(vm); // invisible wide hit zone
-L.polyline(c,{color:t.color,weight:3.5,opacity:.9}).addTo(vm).bindTooltip(esc(t.name),{sticky:false});
+function ivm(){if(!mp)return;if(typeof L==='undefined'){setTimeout(ivm,200);return;}const p=mp;setTimeout(()=>{if(vm){vm.remove();vm=null}vm=mkMap('pmap');const ab=[];(p.tracks||[]).forEach(t=>{if(!t.stats||!t.stats.lats)return;const c=t.stats.lats.map((lat,i)=>[lat,t.stats.lngs[i]]);L.polyline(c,{color:t.color,weight:3.5,opacity:.9}).addTo(vm).bindTooltip(esc(t.name),{sticky:false});
+const vmPl=L.polyline(c,{color:t.color,weight:8,opacity:0}).addTo(vm);
+vmPl.on('mousemove',e=>{
+  if(!t.stats||!t.stats.elevs||!t.stats.elevs.length) return;
+  const ll=e.latlng;let minD=Infinity,bestI=0;
+  c.forEach((pt,i)=>{const d=Math.pow(pt[0]-ll.lat,2)+Math.pow(pt[1]-ll.lng,2);if(d<minD){minD=d;bestI=i}});
+  const elevIdx=Math.round((bestI/(c.length-1))*(t.stats.elevs.length-1));
+  const elev=Math.round(t.stats.elevs[elevIdx]||0);
+  const dist=((bestI/(c.length-1))*parseFloat(t.stats.dist||0)).toFixed(1);
+  vmPl.bindTooltip(`<strong>${elev}m</strong> · ${dist} km`,{sticky:true,className:'elev-map-tip'}).openTooltip(e.latlng);
+  showElevMarker(t.id,elevIdx,t.stats.elevs.length,elev);
+});
+vmPl.on('mouseout',()=>{ vmPl.closeTooltip();hideElevMarker(t.id)});
 pl.on('mousemove',e=>{
   if(!t.stats||!t.stats.elevs||!t.stats.elevs.length) return;
   const ll=e.latlng;
@@ -3905,6 +4052,9 @@ if(typeof L!=="undefined"){boot().then(checkAuth);}else{window.addEventListener(
     </div>
   </div>
   <div id="map-fs-map"></div>
+  <div id="fs-elev-panel">
+    <div id="fs-elev-tracks"></div>
+  </div>
 </div>
 <!-- AUTH OVERLAY -->
 <div id="auth-overlay">

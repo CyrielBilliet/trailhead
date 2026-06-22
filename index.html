@@ -2882,9 +2882,17 @@ async function sbUpsertRaw(table, id, data){
 
 async function sbUpsert(table, item){
   if(table==='posts'){
-    // Note: raw GPX strings are NOT stored in Supabase (too large)
-    // Track stats (lats, lngs, elevs) are sufficient for map rendering
+    // Split: store lats/lngs/elevs in tracks table, keep only stats summary in posts
     const tracks=(item.tracks||[]);
+    // Save full track coords to tracks table
+    for(const t of tracks){
+      if(t.stats&&t.stats.lats&&t.stats.lats.length){
+        await sbUpsertRaw('tracks', item.id+'_'+t.id, {
+          postId:item.id, trackId:t.id,
+          lats:t.stats.lats, lngs:t.stats.lngs, elevs:t.stats.elevs
+        });
+      }
+    }
     // Save post without raw GPX, downsampled coords, and photos stored separately
     const bannerIdx=item.bannerIndex||0;
     const bannerPhoto=item.photos&&item.photos.length?[item.photos[Math.min(bannerIdx,item.photos.length-1)]]:[];
@@ -2906,25 +2914,20 @@ async function sbUpsert(table, item){
       pins:item.pins||{},
       photos:bannerPhoto,
       _allPhotoCount:item.photos?.length||0,
-      tracks:tracks.map(t=>{
-        const stats=t.stats?{
+      tracks:tracks.map(t=>({
+        id:t.id, name:t.name, color:t.color,
+        stats:t.stats?{
           dist:t.stats.dist,
           elevGain:t.stats.elevGain,
-          elevLoss:t.stats.elevLoss,
-          lats:t.stats.lats?downsample(t.stats.lats,200):t.stats.lats,
-          lngs:t.stats.lngs?downsample(t.stats.lngs,200):t.stats.lngs,
-          elevs:t.stats.elevs?downsample(t.stats.elevs,200):t.stats.elevs
-        }:t.stats;
-        return{id:t.id,name:t.name,color:t.color,stats};
-      })
+          elevLoss:t.stats.elevLoss
+          // lats/lngs/elevs stored separately in tracks table
+        }:null
+      }))
     };
     // Store full photos separately in photos table
     if(item.photos&&item.photos.length>1){
       await sbUpsertRaw('photos', item.id, {postId:item.id, photos:item.photos});
     }
-    const _sz=JSON.stringify(payload).length;
-    console.log('Post payload size:',Math.round(_sz/1024),'KB, tracks:',payload.tracks?.length,'photos:',payload.photos?.length);
-    if(_sz>200000) console.warn('Still too large!',_sz);
     return sbUpsertRaw('posts', payload.id, payload);
   }
   return sbUpsertRaw(table, item.id, item);
@@ -3024,10 +3027,8 @@ async function sbSelectSummary(){
           stats:t.stats?{
             dist:t.stats.dist,
             elevGain:t.stats.elevGain,
-            elevLoss:t.stats.elevLoss,
-            elevs:t.stats.elevs,
-            lats:t.stats.lats,
-            lngs:t.stats.lngs
+            elevLoss:t.stats.elevLoss
+            // lats/lngs/elevs loaded on demand via loadFullPost
           }:null
         })),
         connections:p.connections||[],
@@ -3041,14 +3042,35 @@ async function sbSelectSummary(){
 async function loadFullPost(id){
   if(fullPostCache[id]) return fullPostCache[id];
   try{
-    // Load full post (GPX raw strings not stored in Supabase - stats are sufficient)
-    const postRes=await fetch(`${SB_URL}/rest/v1/posts?id=eq.${encodeURIComponent(id)}&select=*`,{
-      headers:{...sbHeaders(),'Cache-Control':'no-cache'}
-    });
+    // Load post + track coords + photos in parallel
+    const [postRes, trackRes]=await Promise.all([
+      fetch(`${SB_URL}/rest/v1/posts?id=eq.${encodeURIComponent(id)}&select=*`,{
+        headers:{...sbHeaders(),'Cache-Control':'no-cache'}
+      }),
+      fetch(`${SB_URL}/rest/v1/tracks?data->postId=eq.${encodeURIComponent(id)}&select=*`,{
+        headers:{...sbHeaders(),'Cache-Control':'no-cache'}
+      })
+    ]);
     if(!postRes.ok) return null;
     const rows=await postRes.json();
     if(!rows.length) return null;
     const full=rows[0].data;
+    // Merge track coords back
+    if(trackRes.ok){
+      const trackRows=await trackRes.json();
+      const trackMap={};
+      trackRows.forEach(r=>{trackMap[r.data.trackId]=r.data;});
+      full.tracks=(full.tracks||[]).map(t=>{
+        const td=trackMap[t.id];
+        if(td&&td.lats){
+          const lats=Array.isArray(td.lats)?td.lats:Object.values(td.lats);
+          const lngs=Array.isArray(td.lngs)?td.lngs:Object.values(td.lngs);
+          const elevs=td.elevs?(Array.isArray(td.elevs)?td.elevs:Object.values(td.elevs)):[];
+          return{...t, stats:{...t.stats, lats:lats.map(Number), lngs:lngs.map(Number), elevs:elevs.map(Number)}};
+        }
+        return t;
+      });
+    }
     // Ensure track stats arrays are proper Arrays (JSON round-trip safety)
     if(full.tracks) full.tracks=full.tracks.map(t=>{
       if(t.stats){
@@ -4337,10 +4359,9 @@ function togglePoiCard(bodyId,chevId){
 
 function tib2(bid,cid){const b=document.getElementById(bid),c=document.getElementById(cid);if(!b)return;const o=b.classList.toggle('open');if(c)c.classList.toggle('open',o)}
 function ivm(){if(!mp)return;if(typeof L==='undefined'){setTimeout(ivm,200);return;}const p=mp;setTimeout(()=>{try{if(vm){vm.remove();vm=null}}catch(e){vm=null}vm=mkMap('pmap');const ab=[];(p.tracks||[]).forEach(t=>{
-  if(!t.stats||!t.stats.lats){console.warn('No stats/lats for track',t.name);return;}
-  console.log('Track',t.name,'lats type:',typeof t.stats.lats,'isArray:',Array.isArray(t.stats.lats),'length:',t.stats.lats?.length||Object.keys(t.stats.lats||{}).length,'sample:',JSON.stringify(t.stats.lats).slice(0,80));
+  if(!t.stats||!t.stats.lats||!t.stats.lats.length)return;
   ensureTrackArrays(t);
-  if(!t.stats.lats.length){console.warn('Empty lats after ensure');return;}
+  if(!t.stats.lats.length)return;
   const c=t.stats.lats.map((lat,i)=>[lat,t.stats.lngs[i]]).filter(pt=>pt[0]!=null&&pt[1]!=null&&typeof pt[0]==='number'&&typeof pt[1]==='number');L.polyline(c,{color:t.color,weight:3.5,opacity:.9}).addTo(vm).bindTooltip(esc(t.name),{sticky:false});
 const vmPl=L.polyline(c,{color:t.color,weight:8,opacity:0}).addTo(vm);
 vmPl.on('mousemove',e=>{

@@ -2944,6 +2944,15 @@ async function sbSelectSummary(){
     const rows=await r.json();
     return rows.map(row=>{
       const p=row.data;
+      // Ensure arrays are proper Arrays after JSON round-trip
+      if(p.tracks) p.tracks=p.tracks.map(t=>{
+        if(t.stats){
+          if(t.stats.lats&&!Array.isArray(t.stats.lats)) t.stats.lats=Object.values(t.stats.lats);
+          if(t.stats.lngs&&!Array.isArray(t.stats.lngs)) t.stats.lngs=Object.values(t.stats.lngs);
+          if(t.stats.elevs&&!Array.isArray(t.stats.elevs)) t.stats.elevs=Object.values(t.stats.elevs);
+        }
+        return t;
+      });
       // Keep only what the feed needs
       return{
         id:p.id,
@@ -2983,6 +2992,15 @@ async function loadFullPost(id){
     const rows=await postRes.json();
     if(!rows.length) return null;
     const full=rows[0].data;
+    // Ensure track stats arrays are proper Arrays (JSON round-trip safety)
+    if(full.tracks) full.tracks=full.tracks.map(t=>{
+      if(t.stats){
+        if(t.stats.lats&&!Array.isArray(t.stats.lats)) t.stats.lats=Array.from(Object.values(t.stats.lats));
+        if(t.stats.lngs&&!Array.isArray(t.stats.lngs)) t.stats.lngs=Array.from(Object.values(t.stats.lngs));
+        if(t.stats.elevs&&!Array.isArray(t.stats.elevs)) t.stats.elevs=Array.from(Object.values(t.stats.elevs));
+      }
+      return t;
+    });
     full._isFullyLoaded=true;
     fullPostCache[id]=full;
     const idx=posts.findIndex(p=>p.id===id);

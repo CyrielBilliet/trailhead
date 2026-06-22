@@ -2883,9 +2883,7 @@ async function sbUpsert(table, item){
       _allPhotoCount:item.photos?.length||0,
       tracks:tracks.map(t=>{
         const stats=t.stats?{...t.stats,
-          lats:t.stats.lats?downsample(t.stats.lats,300):t.stats.lats,
-          lngs:t.stats.lngs?downsample(t.stats.lngs,300):t.stats.lngs,
-          elevs:t.stats.elevs?downsample(t.stats.elevs,300):t.stats.elevs
+          elevs:t.stats.elevs?downsample(t.stats.elevs,500):t.stats.elevs
         }:t.stats;
         return{...t, gpx:undefined, stats};
       })

@@ -2922,6 +2922,9 @@ async function sbUpsert(table, item){
     if(item.photos&&item.photos.length>1){
       await sbUpsertRaw('photos', item.id, {postId:item.id, photos:item.photos});
     }
+    const _sz=JSON.stringify(payload).length;
+    console.log('Post payload size:',Math.round(_sz/1024),'KB, tracks:',payload.tracks?.length,'photos:',payload.photos?.length);
+    if(_sz>200000) console.warn('Still too large!',_sz);
     return sbUpsertRaw('posts', payload.id, payload);
   }
   return sbUpsertRaw(table, item.id, item);

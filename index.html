@@ -886,7 +886,7 @@ body:not(.readonly) .logout-btn{display:flex}
 .fs-elev-track-panel.active{display:block}
 </style>
 </head>
-<body>
+<body class="readonly">
 <div id="ls"><div style="font-family:'Playfair Display',serif;font-size:26px;color:#f0e8dc;margin-bottom:.5rem">Trailhead</div><div class="spin"></div><p>Loading your adventure log…</p></div>
 <!-- Print content (hidden except during print) -->
 <div id="print-content" style="display:none"></div>
@@ -4580,7 +4580,8 @@ function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace
 function fd(ts){return new Date(ts).toLocaleDateString('nl-BE',{day:'numeric',month:'long',year:'numeric'})}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
 window.addEventListener('resize',()=>{if(vm)vm.invalidateSize();if(em)em.invalidateSize();if(om)om.invalidateSize();if(sidebarMap)sidebarMap.invalidateSize();});
-if(typeof L!=="undefined"){boot().then(checkAuth).then(initRouting);}else{window.addEventListener("load",()=>boot().then(checkAuth).then(initRouting));}
+checkAuth();
+if(typeof L!=="undefined"){boot().then(initRouting);}else{window.addEventListener("load",()=>boot().then(initRouting));}
 </script>
 
 <!-- FULLSCREEN MAP OVERLAY -->

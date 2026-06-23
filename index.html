@@ -3082,19 +3082,49 @@ async function sbSelectSummary(){
   }catch(e){console.warn('Supabase summary error:',e);return[];}
 }
 
-async function diagnoseTracks(){
-  // Check what's in the tracks table
-  const r=await fetch(`${SB_URL}/rest/v1/tracks?select=id&limit=100`,{headers:sbHeaders()});
-  const tracks=await r.json();
-  console.log('TRACKS table records:',tracks.length, tracks.map(t=>t.id));
-  const pr=await fetch(`${SB_URL}/rest/v1/photos?select=id&limit=100`,{headers:sbHeaders()});
-  const photos=await pr.json();
-  console.log('PHOTOS table records:',photos.length, photos.map(p=>p.id));
-  // Check first post's local track data
-  if(posts.length){
-    console.log('First post tracks:',posts[0].tracks?.map(t=>({name:t.name,hasLats:!!(t.stats&&t.stats.lats&&t.stats.lats.length),latsLen:t.stats?.lats?.length||0})));
+async function repairTracks(){
+  if(!isLoggedIn){console.warn('Log in first');return;}
+  // Read full posts from local IndexedDB (may still have coords)
+  const localPosts=await dga('posts');
+  let repaired=0, missing=0;
+  for(const lp of localPosts){
+    const tracksWithCoords=(lp.tracks||[]).filter(t=>t.stats&&t.stats.lats&&(Array.isArray(t.stats.lats)?t.stats.lats.length:Object.keys(t.stats.lats||{}).length));
+    if(!tracksWithCoords.length){
+      if((lp.tracks||[]).length) missing++;
+      continue;
+    }
+    // Upload these track coords to Supabase
+    for(const t of tracksWithCoords){
+      const lats=Array.isArray(t.stats.lats)?t.stats.lats:Object.values(t.stats.lats);
+      const lngs=Array.isArray(t.stats.lngs)?t.stats.lngs:Object.values(t.stats.lngs);
+      const elevs=t.stats.elevs?(Array.isArray(t.stats.elevs)?t.stats.elevs:Object.values(t.stats.elevs)):[];
+      const ok=await sbUpsertRaw('tracks', lp.id+'_'+t.id, {
+        postId:lp.id, trackId:t.id,
+        lats:downsample(lats.map(Number),500),
+        lngs:downsample(lngs.map(Number),500),
+        elevs:downsample(elevs.map(Number),500)
+      });
+      if(ok) repaired++;
+    }
+    // Also upload photos if missing
+    if(lp.photos&&lp.photos.length>1){
+      try{
+        await fetch(`${SB_URL}/rest/v1/photos?data->>postId=eq.${encodeURIComponent(lp.id)}`,{
+          method:'DELETE', headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
+        });
+      }catch(e){}
+      const sbPhotos=await Promise.all(lp.photos.map(ph=>compressForCloud(ph)));
+      for(let i=0;i<sbPhotos.length;i+=3){
+        await sbUpsertRaw('photos', lp.id+'_'+i, {postId:lp.id, chunkIdx:i, photos:sbPhotos.slice(i,i+3)});
+      }
+    }
+    // Clear cache so it reloads fresh
+    delete fullPostCache[lp.id];
   }
+  console.log('Repair done. Tracks uploaded:',repaired,'Posts with no local coords:',missing);
+  toast(`✓ Hersteld: ${repaired} tracks. ${missing>0?missing+' posts zonder lokale data':''}`);
 }
+
 
 async function loadFullPost(id){
   if(fullPostCache[id]){
@@ -3122,10 +3152,8 @@ async function loadFullPost(id){
       const trackRows=await trackRes.json();
       const trackMap={};
       trackRows.forEach(r=>{trackMap[r.data.trackId]=r.data;});
-      console.log('[loadFullPost] post',id,'has tracks:',(full.tracks||[]).map(t=>t.id),'trackMap keys:',Object.keys(trackMap));
       full.tracks=(full.tracks||[]).map(t=>{
         const td=trackMap[t.id];
-        console.log('[loadFullPost] track',t.id,'matched:',!!td,'lats:',td?.lats?.length||(td?.lats?Object.keys(td.lats).length:0));
         if(td&&td.lats){
           const lats=Array.isArray(td.lats)?td.lats:Object.values(td.lats);
           const lngs=Array.isArray(td.lngs)?td.lngs:Object.values(td.lngs);

@@ -2898,14 +2898,22 @@ async function sbUpsertRaw(table, id, data){
 
 async function sbUpsert(table, item){
   if(table==='posts'){
+    // SAFETY: never sync a summary-only post (would wipe full photo/track data)
+    if(item._isFullyLoaded===false){
+      console.warn('Skipping summary post upsert:',item.id);
+      return true;
+    }
     // Split: store lats/lngs/elevs in tracks table, keep only stats summary in posts
     const tracks=(item.tracks||[]);
-    // Delete old track coords first (avoid orphans from reordered/removed tracks)
-    try{
-      await fetch(`${SB_URL}/rest/v1/tracks?data->>postId=eq.${encodeURIComponent(item.id)}`,{
-        method:'DELETE', headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
-      });
-    }catch(e){console.warn('Track cleanup error:',e);}
+    const hasCoords=tracks.some(t=>t.stats&&t.stats.lats&&t.stats.lats.length);
+    // Only delete+rewrite tracks if this post actually has coordinate data
+    if(hasCoords){
+      try{
+        await fetch(`${SB_URL}/rest/v1/tracks?data->>postId=eq.${encodeURIComponent(item.id)}`,{
+          method:'DELETE', headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
+        });
+      }catch(e){console.warn('Track cleanup error:',e);}
+    }
     // Save full track coords to tracks table
     for(const t of tracks){
       if(t.stats&&t.stats.lats&&t.stats.lats.length){
@@ -2949,15 +2957,13 @@ async function sbUpsert(table, item){
         }:null
       }))
     };
-    // Store full photos separately in photos table
+    // Store full photos separately in photos table (only if we have the full set)
     if(item.photos&&item.photos.length>1){
-      // First delete ALL existing photo chunks for this post (avoid duplicates)
       try{
         await fetch(`${SB_URL}/rest/v1/photos?data->>postId=eq.${encodeURIComponent(item.id)}`,{
           method:'DELETE', headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
         });
       }catch(e){console.warn('Photo cleanup error:',e);}
-      // Compress photos and split into chunks of 3
       const sbPhotos=await Promise.all(item.photos.map(ph=>compressForCloud(ph)));
       const chunkSize=3;
       for(let i=0;i<sbPhotos.length;i+=chunkSize){
@@ -3077,7 +3083,12 @@ async function sbSelectSummary(){
 }
 
 async function loadFullPost(id){
-  if(fullPostCache[id]) return fullPostCache[id];
+  if(fullPostCache[id]){
+    // Ensure posts array also has the full version
+    const ci=posts.findIndex(p=>p.id===id);
+    if(ci>-1) posts[ci]=fullPostCache[id];
+    return fullPostCache[id];
+  }
   try{
     // Load post + track coords + photos in parallel
     const [postRes, trackRes]=await Promise.all([
@@ -4150,7 +4161,7 @@ function bpe(){if(typeof L==='undefined'){setTimeout(bpe,200);return;}document.g
     if(linkedPoi){linkedPoi.photoIdx=null;renderPoiList();}
     ppe(si,e.latlng.lat,e.latlng.lng);cpn[si]={lat:e.latlng.lat,lng:e.latlng.lng};rphl();umh()
   });umh()}
-function ret(){etl.forEach(l=>em.removeLayer(l));etl=[];const ab=[];ctr.forEach(t=>{if(!t.stats)return;const c=t.stats.lats.map((lat,i)=>[lat,t.stats.lngs[i]]).filter(pt=>pt[0]!=null&&pt[1]!=null&&typeof pt[0]==='number'&&typeof pt[1]==='number');etl.push(L.polyline(c,{color:t.color,weight:3,opacity:.9}).addTo(em));ab.push(...c)});if(ab.length)em.fitBounds(L.latLngBounds(ab),{padding:[20,20]});else em.setView([50.85,4.35],8);}
+function ret(){etl.forEach(l=>em.removeLayer(l));etl=[];const ab=[];ctr.forEach(t=>{if(!t.stats||!t.stats.lats)return;ensureTrackArrays(t);if(!t.stats.lats.length)return;const c=t.stats.lats.map((lat,i)=>[lat,t.stats.lngs[i]]).filter(pt=>pt[0]!=null&&pt[1]!=null&&typeof pt[0]==='number'&&typeof pt[1]==='number');etl.push(L.polyline(c,{color:t.color,weight:3,opacity:.9}).addTo(em));ab.push(...c)});if(ab.length)em.fitBounds(L.latLngBounds(ab),{padding:[20,20]});else em.setView([50.85,4.35],8);}
 function repm(){Object.values(epm).forEach(m=>em&&em.removeLayer(m));epm={};Object.entries(cpn).forEach(([idx,ll])=>ppe(parseInt(idx),ll.lat,ll.lng))}
 function ppe(idx,lat,lng){if(epm[idx])em.removeLayer(epm[idx]);const ph=cph[idx];if(!ph)return;const icon=L.divIcon({html:`<div style="width:36px;height:36px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--surface);border:2px solid var(--moss);overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.4)"><img src="${ph.src}" style="width:100%;height:100%;object-fit:cover;transform:rotate(45deg) scale(1.4)"></div>`,iconSize:[36,36],iconAnchor:[18,36],className:''});const m=L.marker([lat,lng],{icon,draggable:true}).addTo(em);m.on('dragend',e=>{const ll=e.target.getLatLng();cpn[idx]={lat:ll.lat,lng:ll.lng}});epm[idx]=m}
 function umh(){const h=document.getElementById('mh2'),top=document.getElementById('pet');if(si!==null){const ph=cph[si];h.textContent=`📌 Klik op de kaart om de pin voor "${ph.name}" te ${cpn[si]?'verplaatsen':'plaatsen'}`;h.className='mh sel';top.innerHTML=`<strong>Pinnen:</strong> ${esc(ph.name)}`}else{h.textContent='Klik op de kaart om een POI te plaatsen, of selecteer eerst een foto voor een fotopin';h.className='mh';top.textContent='Kaart — klik voor POI of fotopin'}}

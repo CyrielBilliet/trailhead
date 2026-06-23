@@ -3187,8 +3187,14 @@ async function syncIDBFromSupabase(){
 async function syncAllToSupabase(){
   if(!isLoggedIn) return;
   try{
-    // Sequential upsert to avoid Supabase rate limits
-    for(const p of posts) await sbUpsert('posts',p);
+    // Only sync posts that are fully loaded (summary posts would overwrite photos/tracks with partial data)
+    for(const p of posts){
+      if(p._isFullyLoaded===false){
+        // Summary only - skip to avoid wiping full photo/track data in Supabase
+        continue;
+      }
+      await sbUpsert('posts',p);
+    }
     for(const g of groups) await sbUpsert('groups',g);
     for(const p of persons) await sbUpsert('persons',p);
     for(const v of vacations) await sbUpsert('vacations',v);
@@ -3920,9 +3926,10 @@ async function sp(){
   if(!actGroup){actGroup={id:'act-'+cat.toLowerCase().replace(/\s+/g,'-'),name:cat,isActivity:true};groups.push(actGroup);await dpu('groups',actGroup)}
   const finalGroups=[...new Set([...cg,actGroup.id])];
   const planned=document.getElementById('f-planned').checked;
-  const p={id:eid||Date.now().toString(),title,body:document.getElementById('fb').value.trim(),category:cat,planned,groups:finalGroups,date:eid?(posts.find(x=>x.id===eid)||{}).date||Date.now():Date.now(),tracks:ctr,connections:currentConns,pois:currentPois,persons:currentPersons,scores:currentScores,photos:cph,pins:cpn,bannerIndex:cbi,infoBlocks:cib.filter(b=>{if(b.type==='timeline')return b.title.trim()||(b.tlNotes||[]).length;return b.title.trim()||(Array.isArray(b.content)?b.content.some(i=>i.trim()):b.content?.trim())})};
+  const p={id:eid||Date.now().toString(),title,body:document.getElementById('fb').value.trim(),category:cat,planned,groups:finalGroups,date:eid?(posts.find(x=>x.id===eid)||{}).date||Date.now():Date.now(),tracks:ctr,connections:currentConns,pois:currentPois,persons:currentPersons,scores:currentScores,photos:cph,pins:cpn,bannerIndex:cbi,_isFullyLoaded:true,infoBlocks:cib.filter(b=>{if(b.type==='timeline')return b.title.trim()||(b.tlNotes||[]).length;return b.title.trim()||(Array.isArray(b.content)?b.content.some(i=>i.trim()):b.content?.trim())})};
   if(eid){const i=posts.findIndex(x=>x.id===eid);if(i>-1)posts[i]=p}else posts.push(p);
   await dpu('posts',p);
+  fullPostCache[p.id]=p;
   const _sz=JSON.stringify(p).length;
   if(_sz>800000) toast('⚠ Post is groot ('+Math.round(_sz/1024)+'KB) — gebruik minder of kleinere fotos');
   else toast('✓ Post opgeslagen!');

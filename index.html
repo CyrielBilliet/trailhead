@@ -3082,6 +3082,20 @@ async function sbSelectSummary(){
   }catch(e){console.warn('Supabase summary error:',e);return[];}
 }
 
+async function diagnoseTracks(){
+  // Check what's in the tracks table
+  const r=await fetch(`${SB_URL}/rest/v1/tracks?select=id&limit=100`,{headers:sbHeaders()});
+  const tracks=await r.json();
+  console.log('TRACKS table records:',tracks.length, tracks.map(t=>t.id));
+  const pr=await fetch(`${SB_URL}/rest/v1/photos?select=id&limit=100`,{headers:sbHeaders()});
+  const photos=await pr.json();
+  console.log('PHOTOS table records:',photos.length, photos.map(p=>p.id));
+  // Check first post's local track data
+  if(posts.length){
+    console.log('First post tracks:',posts[0].tracks?.map(t=>({name:t.name,hasLats:!!(t.stats&&t.stats.lats&&t.stats.lats.length),latsLen:t.stats?.lats?.length||0})));
+  }
+}
+
 async function loadFullPost(id){
   if(fullPostCache[id]){
     // Ensure posts array also has the full version

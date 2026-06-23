@@ -3122,8 +3122,10 @@ async function loadFullPost(id){
       const trackRows=await trackRes.json();
       const trackMap={};
       trackRows.forEach(r=>{trackMap[r.data.trackId]=r.data;});
+      console.log('[loadFullPost] post',id,'has tracks:',(full.tracks||[]).map(t=>t.id),'trackMap keys:',Object.keys(trackMap));
       full.tracks=(full.tracks||[]).map(t=>{
         const td=trackMap[t.id];
+        console.log('[loadFullPost] track',t.id,'matched:',!!td,'lats:',td?.lats?.length||(td?.lats?Object.keys(td.lats).length:0));
         if(td&&td.lats){
           const lats=Array.isArray(td.lats)?td.lats:Object.values(td.lats);
           const lngs=Array.isArray(td.lngs)?td.lngs:Object.values(td.lngs);

@@ -1080,9 +1080,15 @@ body:not(.readonly) .logout-btn{display:flex}
 
   <div class="fg">
     <label>Foto's</label>
+    <div style="display:flex;gap:8px;margin-bottom:.5rem">
+      <input type="text" id="photo-url-input" placeholder="Plak een afbeeldings-URL (https://…)" 
+        style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--sans);background:var(--input-bg);color:var(--ink);outline:none"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();addPhotoFromUrl()}">
+      <button class="btn btn-sm" type="button" onclick="addPhotoFromUrl()">🔗 Toevoegen</button>
+    </div>
     <div class="uz" id="pz" onclick="document.getElementById('fp2').click()" ondragover="dov(event,'pz')" ondragleave="dlv('pz')" ondrop="dp(event)">
       <input type="file" id="fp2" accept="image/*" multiple onchange="lp(this.files)">
-      <div class="uzl">📷 <strong>Foto's toevoegen</strong> — worden automatisch geoptimaliseerd</div>
+      <div class="uzl">📷 <strong>Foto's toevoegen</strong> — uploaden of URL plakken hierboven</div>
     </div>
     <div class="phl" id="phl"></div>
   </div>
@@ -2849,7 +2855,11 @@ async function ensureTrackArrays(t){
 }
 
 async function compressForCloud(ph){
-  // Compress photo to max 600px and quality 0.5 for cloud storage
+  // URL photos: keep the URL as-is (no compression needed, tiny storage)
+  if(ph.isUrl||(ph.src&&!ph.src.startsWith('data:'))){
+    return {...ph};
+  }
+  // Compress base64 photo to max 600px and quality 0.5 for cloud storage
   return new Promise(r=>{
     const MAX=600,Q=.5,img=new Image();
     img.onload=()=>{
@@ -4096,6 +4106,28 @@ function trDragEnd(){
   });
 }
 async function lp(files){for(const f of [...files]){await new Promise(resolve=>{const r=new FileReader();r.onload=async e=>{const c=await cp2(e.target.result);cph.push({src:c,name:f.name,caption:''});si=null;rphl();mbpe();resolve()};r.readAsDataURL(f)})}}
+
+function addPhotoFromUrl(){
+  const input=document.getElementById('photo-url-input');
+  const url=input.value.trim();
+  if(!url){toast('Plak eerst een URL');return}
+  if(!/^https?:\/\//i.test(url)){toast('URL moet beginnen met http:// of https://');return}
+  // Validate it's an image by trying to load it
+  const testImg=new Image();
+  testImg.onload=()=>{
+    // Store the URL directly as the photo src (isUrl flag marks it as external)
+    cph.push({src:url, name:'Internetfoto', caption:'', isUrl:true});
+    si=null;
+    rphl();
+    mbpe();
+    input.value='';
+    toast('✓ Foto toegevoegd');
+  };
+  testImg.onerror=()=>{
+    toast('⚠ Kon afbeelding niet laden — controleer de URL');
+  };
+  testImg.src=url;
+}
 function rphl(){
   const l=document.getElementById('phl');
   if(!cph.length){l.innerHTML='';return}

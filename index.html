@@ -954,7 +954,7 @@ body:not(.readonly) .logout-btn{display:flex}
 <div id="view-vacations" class="view">
   <div class="ph" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem">
     <div><h2>Vakanties</h2><p>Groepeer je activiteiten per reis of vakantie</p></div>
-    <button class="btn btn-primary" onclick="showVacationEditor()">+ Nieuwe vakantie</button>
+    <button class="btn btn-primary edit-only" onclick="showVacationEditor()">+ Nieuwe vakantie</button>
   </div>
   <div class="vac-grid" id="vac-grid"></div>
   <div id="vac-empty" style="display:none" class="es"><div class="icon">🏖️</div><h3>Nog geen vakanties</h3><p>Maak een vakantie aan om activiteiten te groeperen.</p></div>
@@ -993,7 +993,7 @@ body:not(.readonly) .logout-btn{display:flex}
   <p class="pbody" id="vd-desc" style="margin-bottom:1.25rem"></p>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
     <div class="sl" style="margin-bottom:0">Activiteiten</div>
-    <button class="btn btn-sm btn-primary" onclick="togglePostPicker()">+ Activiteit toevoegen</button>
+    <button class="btn btn-sm btn-primary edit-only" onclick="togglePostPicker()">+ Activiteit toevoegen</button>
   </div>
   <div id="vd-post-picker" style="display:none;margin-bottom:1rem">
     <input type="text" id="vd-picker-search" placeholder="Zoek post…" oninput="filterPostPicker(this.value)"
@@ -1003,8 +1003,8 @@ body:not(.readonly) .logout-btn{display:flex}
   </div>
   <div class="vac-post-list" id="vd-post-list"></div>
   <div style="display:flex;gap:8px;margin-top:1.5rem">
-    <button class="btn" onclick="editCurrentVacation()">✏️ Bewerken</button>
-    <button class="btn btn-danger" onclick="deleteCurrentVacation()">🗑 Verwijderen</button>
+    <button class="btn edit-only" onclick="editCurrentVacation()">✏️ Bewerken</button>
+    <button class="btn btn-danger edit-only" onclick="deleteCurrentVacation()">🗑 Verwijderen</button>
   </div>
 </div>
 
@@ -3435,8 +3435,8 @@ function renderVacations(){
         </div>
       </div>
       <div class="vac-card-actions" onclick="event.stopPropagation()">
-        <button class="btn btn-sm" onclick="editVacation('${v.id}')">✏️</button>
-        <button class="btn btn-sm btn-danger" onclick="deleteVac('${v.id}')">🗑</button>
+        <button class="btn btn-sm edit-only" onclick="editVacation('${v.id}')">✏️</button>
+        <button class="btn btn-sm btn-danger edit-only" onclick="deleteVac('${v.id}')">🗑</button>
       </div>
     </div>`;
   }).join('');
@@ -3473,7 +3473,7 @@ function renderVacPostList(v){
         <div class="vac-post-title">${esc(p.title||'Untitled')}</div>
         <div class="vac-post-meta">${fd(p.date)}${parseFloat(dist)>0?' · '+dist+' km':''}</div>
       </div>
-      <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();removeFromVac('${v.id}','${p.id}')">✕</button>
+      <button class="btn btn-sm btn-danger edit-only" onclick="event.stopPropagation();removeFromVac('${v.id}','${p.id}')">✕</button>
     </div>`;
   }).join('');
 }

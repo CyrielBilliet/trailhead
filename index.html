@@ -3783,17 +3783,14 @@ async function rom(){
   if(typeof L==='undefined'){setTimeout(()=>rom(),200);return;}
   const C=document.getElementById('movc');
   // Ensure track coords are loaded for posts with tracks (lazy-loaded)
-  const postsWithTracks=posts.filter(p=>(p.tracks||[]).length>0&&!p.planned);
-  console.log('[rom] postsWithTracks:',postsWithTracks.length,postsWithTracks.map(p=>({id:p.id,title:p.title,loaded:p._isFullyLoaded,hasCoords:(p.tracks||[]).some(t=>t.stats&&t.stats.lats&&t.stats.lats.length)})));
+  const postsWithTracks=posts.filter(p=>(p.tracks||[]).length>0);
   for(const p of postsWithTracks){
     const hasCoords=(p.tracks||[]).some(t=>t.stats&&t.stats.lats&&t.stats.lats.length);
     if(!hasCoords&&!p._isFullyLoaded){
-      console.log('[rom] loading full post:',p.id);
       await loadFullPost(p.id);
     }
   }
   const pw=posts.filter(p=>(p.tracks||[]).some(t=>t.stats&&t.stats.lats&&t.stats.lats.length));
-  console.log('[rom] pw (posts with coords after load):',pw.length);
   const vi=af?pw.filter(p=>(p.groups||[]).includes(af)):pw;
   if(!vi.length){if(om){om.remove();om=null}C.innerHTML=`<div class="memp"><div class="icon">🗺️</div><p>Geen routes om te tonen${af?' voor deze groep':''}.<br>Voeg GPX tracks toe aan je posts.</p></div>`;return}
   C.innerHTML=`<div class="mov"><div style="position:relative"><div id="omap"></div><div class="map-layer-ctrl" id="lc-omap"><button class="mlb active" onclick="setLayer('omap',0)">Standaard</button><button class="mlb" onclick="setLayer('omap',1)">Topo</button><button class="mlb" onclick="setLayer('omap',2)">Satelliet</button></div></div><div class="mleg" id="mleg"></div></div>`;
@@ -3817,7 +3814,7 @@ async function rom(){
     tracks.forEach(t=>{
       if(!t.stats||!t.stats.lats)return;ensureTrackArrays(t);
       const coords=t.stats.lats.map((la,i)=>[la,t.stats.lngs[i]]).filter(pt=>pt[0]!=null&&pt[1]!=null&&typeof pt[0]==='number'&&typeof pt[1]==='number');
-      const poly=L.polyline(coords,{color:col,weight:3.5,opacity:.85}).addTo(om).bindPopup(pop,{maxWidth:240})
+      const poly=L.polyline(coords,{color:col,weight:3.5,opacity:.85,dashArray:p.planned?'8,6':null}).addTo(om).bindPopup(pop,{maxWidth:240})
         .on('mouseover',function(){this.setStyle({weight:5,opacity:1})})
         .on('mouseout',function(){this.setStyle({weight:3.5,opacity:.85})});
       ol.push(poly);ab.push(...coords);
@@ -3828,7 +3825,7 @@ async function rom(){
   if(ab.length)om.fitBounds(L.latLngBounds(ab),{padding:[30,30]});
   const leg=document.getElementById('mleg');
   leg.innerHTML=`<span style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-right:4px">${vi.length} route${vi.length!==1?'s':''}</span>`
-    +vi.map((p,i)=>`<div class="mli"><div class="mll" style="background:${PC[i%PC.length]}"></div><span style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted)">${esc(p.title||'Untitled')}</span></div>`).join('');
+    +vi.map((p,i)=>`<div class="mli"><div class="mll" style="background:${PC[i%PC.length]}${p.planned?';border:1.5px dashed #fff;box-shadow:inset 0 0 0 1px '+PC[i%PC.length]:''}"></div><span style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted)">${p.planned?'📅 ':''}${esc(p.title||'Untitled')}</span></div>`).join('');
   setTimeout(()=>om.invalidateSize(),100);
 }
 

@@ -2388,6 +2388,7 @@ function openFullscreenMap(){
     const el=document.getElementById('map-fs-map');
     if(fsMap){fsMap.remove();fsMap=null;mapLayers['fs-map']=null}
     fsMap=L.map(el,{zoomControl:true});
+    attachResizeObserver(fsMap, el);
     addTileLayer(fsMap,'fs-map',0);
     const tracks=p.tracks||[];
     const allBounds=[];
@@ -2641,10 +2642,23 @@ function setLayer(mapId, idx){
 }
 
 // Helper: init a map with default tile layer
+function attachResizeObserver(map, el){
+  // Auto-fix map size whenever its container becomes visible or resizes
+  if(!el||typeof ResizeObserver==='undefined') return;
+  let rafId=null;
+  const ro=new ResizeObserver(()=>{
+    if(rafId)cancelAnimationFrame(rafId);
+    rafId=requestAnimationFrame(()=>{try{map.invalidateSize();}catch(e){}});
+  });
+  ro.observe(el);
+  map._resizeObserver=ro;
+}
+
 function mkMap(elId){
   if(typeof L==='undefined') return null;
   const m=L.map(elId);
   addTileLayer(m, elId, 0);
+  attachResizeObserver(m, document.getElementById(elId));
   return m;
 }
 
@@ -2696,6 +2710,7 @@ function initPostSidebar(p){
   }
 
   sidebarMap=L.map(el,{zoomControl:false,attributionControl:true});
+  attachResizeObserver(sidebarMap, el);
   addTileLayer(sidebarMap,'sb-pmap',0);
 
   const allBounds=[];

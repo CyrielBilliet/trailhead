@@ -4014,7 +4014,7 @@ function showEd(id){
     ctr=(p.tracks||[]).map(t=>({...t,stats:t.stats?{...t.stats}:null}));
     cph=p.photos?p.photos.map(ph=>({...ph})):[];cpn=p.pins?JSON.parse(JSON.stringify(p.pins)):{};cg=[...(p.groups||[])];cbi=p.bannerIndex||0;
     cib=(p.infoBlocks||[]).map(b=>({...b,content:Array.isArray(b.content)?[...b.content]:b.content,tlConfig:{...(b.tlConfig||{})},tlNotes:(b.tlNotes||[]).map(n=>({...n}))}));
-    currentConns=(p.connections||[]).map(c=>({...c}));currentPois=(p.pois||[]).map(p=>({...p}));currentPersons=[...(p.persons||[])];rtl();rphl();ribe();renderConnList();renderPoiList();renderPersonChips();setTimeout(bpe,150); // always show map
+    currentConns=(p.connections||[]).map(c=>({...c}));currentPois=(p.pois||[]).map(p=>({...p}));currentPersons=[...(p.persons||[])];currentScores={...(p.scores||{})};rtl();rphl();ribe();renderConnList();renderPoiList();renderPersonChips();renderEditorScores();setTimeout(bpe,150); // always show map
   } else {
     document.getElementById('et').textContent='Nieuwe Post';
     document.getElementById('ft').value='';document.getElementById('fb').value='';document.getElementById('fc2').value='Hiking';

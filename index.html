@@ -2649,6 +2649,15 @@ function setLayer(mapId, idx){
 }
 
 // Helper: init a map with default tile layer
+function whenSized(el, cb, tries){
+  // Wait until the element has real dimensions before running cb (fixes Leaflet 0-height bug)
+  tries = tries || 0;
+  if(!el){cb();return;}
+  if(el.offsetWidth > 0 && el.offsetHeight > 0){cb();return;}
+  if(tries > 40){cb();return;} // give up after ~0.7s, run anyway
+  requestAnimationFrame(()=>whenSized(el, cb, tries+1));
+}
+
 function attachResizeObserver(map, el){
   // Auto-fix map size whenever its container becomes visible or resizes
   if(!el||typeof ResizeObserver==='undefined') return;
@@ -2710,12 +2719,17 @@ function initPostSidebar(p){
   if(sidebarMap){sidebarMap.remove();sidebarMap=null;mapLayers['sb-pmap']=null}
 
   const hasTracks=tracks.some(t=>t.stats&&t.stats.lats&&t.stats.lats.length);
-  if(!hasTracks){
+  const hasPois=(p.pois||[]).some(poi=>poi.lat!=null&&poi.lng!=null);
+  const hasConns=(p.connections||[]).some(c=>c.fromCoord||c.toCoord);
+  if(!hasTracks&&!hasPois&&!hasConns){
     el.style.display='flex';el.style.alignItems='center';el.style.justifyContent='center';
-    el.innerHTML='<span style="font-size:12px;color:var(--muted);font-family:var(--sans)">Geen GPX data</span>';
+    el.innerHTML='<span style="font-size:12px;color:var(--muted);font-family:var(--sans)">Geen kaartdata</span>';
     return;
   }
+  // Reset any placeholder styling from a previous render
+  el.style.display='';el.style.alignItems='';el.style.justifyContent='';el.innerHTML='';
 
+  whenSized(el, ()=>{
   sidebarMap=L.map(el,{zoomControl:false,attributionControl:true});
   attachResizeObserver(sidebarMap, el);
   addTileLayer(sidebarMap,'sb-pmap',0);
@@ -2758,10 +2772,16 @@ function initPostSidebar(p){
   // Draw connections in sidebar
   (p.connections||[]).forEach(c=>drawConnOnMap(sidebarMap,c));
   (p.pois||[]).forEach((poi,i)=>{poi._photos=p.photos;addPoiMarkerToMap(sidebarMap,poi,i+1,false)});
+  // Include POI + connection coords in bounds
+  (p.pois||[]).forEach(poi=>{if(poi.lat!=null&&poi.lng!=null)allBounds.push([Number(poi.lat),Number(poi.lng)])});
+  (p.connections||[]).forEach(c=>{if(c.fromCoord&&c.fromCoord.lat!=null)allBounds.push([c.fromCoord.lat,c.fromCoord.lng]);if(c.toCoord&&c.toCoord.lat!=null)allBounds.push([c.toCoord.lat,c.toCoord.lng])});
   setTimeout(()=>{
     sidebarMap.invalidateSize();
-    if(allBounds.length) sidebarMap.fitBounds(L.latLngBounds(allBounds),{padding:[12,12]});
+    if(allBounds.length>1) sidebarMap.fitBounds(L.latLngBounds(allBounds),{padding:[12,12]});
+    else if(allBounds.length===1) sidebarMap.setView(allBounds[0],14);
+    else sidebarMap.setView([50.85,4.35],8);
   },120);
+  });
 }
 
 function refreshSidebar(){}
@@ -4517,7 +4537,7 @@ async function vp(id){
   const execBtn=document.getElementById('pv-execute-btn');
   if(execBtn) execBtn.innerHTML=p.planned?`<button class="btn btn-sm btn-execute edit-only" onclick="executePost('${p.id}')">✓ Markeer als uitgevoerd</button>`:'';
   _vpRunning=false;
-  initPostSidebar(p);spt('story');sv('post');
+  sv('post');spt('story');initPostSidebar(p);
 }
 function rtlv(b){const cfg=b.tlConfig||{};const notes=(b.tlNotes||[]).slice().sort((a,z)=>(a.timeFrom||'').localeCompare(z.timeFrom||''));const sd=cfg.startDate,ed=cfg.endDate||sd;let rs='';if(sd){const s=fds(sd);rs=ed&&ed!==sd?`${s} → ${fds(ed)}`:s;if(cfg.startTime)rs+=` · ${cfg.startTime}`;if(cfg.endTime)rs+=` → ${cfg.endTime}`}let h=`<div class="tlv">`;if(rs)h+=`<div class="tlrh"><span class="tlrb">📅 ${esc(rs)}</span></div>`;h+=`<div class="tlsp">`;notes.forEach(n=>{const sp=n.type==='span';const tl=sp&&n.timeTo?`${n.timeFrom||'?'} → ${n.timeTo}`:(n.timeFrom||'');h+=`<div class="tli"><div class="tldt ${sp?'sp':''}"></div><div class="tlii ${sp?'sp':''}">
   ${tl?`<div class="tltm ${sp?'sp':''}">${esc(tl)}</div>`:''}

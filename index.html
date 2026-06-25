@@ -2514,9 +2514,16 @@ fsPl.on('mouseout',()=>{
     }
     // Add connection coords to bounds
     (p.connections||[]).forEach(c=>{if(c.fromCoord)allBounds.push([c.fromCoord.lat,c.fromCoord.lng]);if(c.toCoord)allBounds.push([c.toCoord.lat,c.toCoord.lng])});
+    // Include POIs in bounds
+    (p.pois||[]).forEach(poi=>{if(poi.lat!=null&&poi.lng!=null)allBounds.push([Number(poi.lat),Number(poi.lng)])});
     fsMap.invalidateSize();
-    if(allBounds.length) fsMap.fitBounds(L.latLngBounds(allBounds),{padding:[30,30]});
-  },80);
+    if(allBounds.length>1) fsMap.fitBounds(L.latLngBounds(allBounds),{padding:[30,30]});
+    else if(allBounds.length===1) fsMap.setView(allBounds[0],14);
+    else fsMap.setView([50.85,4.35],8);
+    // Repeated invalidateSize to handle overlay that just became visible
+    setTimeout(()=>{if(fsMap){fsMap.invalidateSize();if(allBounds.length>1)fsMap.fitBounds(L.latLngBounds(allBounds),{padding:[30,30]});}},200);
+    setTimeout(()=>{if(fsMap)fsMap.invalidateSize();},450);
+  },150);
 }
 
 function closeFullscreenMap(){
@@ -3712,10 +3719,18 @@ async function boot(){
   try{document.getElementById('ls').style.display='none';}catch(e){}
   rfb();rf();
 }
+function invalidateAllMaps(){
+  [vm, om, sidebarMap, fsMap, em].forEach(m=>{
+    if(m){try{m.invalidateSize();}catch(e){}}
+  });
+}
+
 function sv(n){
   closeDrawer();
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+n).classList.add('active');
+  // Fix any map sizes after the view becomes visible
+  requestAnimationFrame(()=>{invalidateAllMaps();setTimeout(invalidateAllMaps,200);setTimeout(invalidateAllMaps,500);});
   // Update URL hash based on view
   if(n==='feed'&&location.hash&&!location.hash.startsWith('#/feed')) history.pushState(null,'','#/feed');
   if(n==='feed'){
@@ -4616,6 +4631,7 @@ function fd(ts){return new Date(ts).toLocaleDateString('nl-BE',{day:'numeric',mo
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
 window.addEventListener('resize',()=>{if(vm)vm.invalidateSize();if(em)em.invalidateSize();if(om)om.invalidateSize();if(sidebarMap)sidebarMap.invalidateSize();});
 checkAuth();
+window.addEventListener('resize',()=>{if(typeof invalidateAllMaps==='function')invalidateAllMaps();});
 if(typeof L!=="undefined"){boot().then(initRouting);}else{window.addEventListener("load",()=>boot().then(initRouting));}
 </script>
 

@@ -884,6 +884,17 @@ body:not(.readonly) .logout-btn{display:flex}
 .fs-elev-tab.active{color:#fff;border-color:var(--color)}
 .fs-elev-track-panel{display:none}
 .fs-elev-track-panel.active{display:block}
+
+/* TAALKEUZE */
+.lang-switch{display:inline-flex;gap:2px;background:var(--surface2);border-radius:8px;padding:2px;margin-left:4px}
+.lang-btn{padding:4px 9px;border:none;background:transparent;border-radius:6px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;font-family:var(--sans);transition:all .15s}
+.lang-btn:hover{color:var(--ink)}
+.lang-btn.active{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+/* Editor language tabs */
+.edlang-tabs{display:inline-flex;gap:4px;margin-bottom:.5rem}
+.edlang-tab{padding:4px 12px;border:1.5px solid var(--border);background:transparent;border-radius:20px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;font-family:var(--sans);transition:all .15s}
+.edlang-tab:hover{border-color:var(--moss)}
+.edlang-tab.active{background:var(--moss);color:#fff;border-color:var(--moss)}
 </style>
 </head>
 <body class="readonly">
@@ -894,11 +905,12 @@ body:not(.readonly) .logout-btn{display:flex}
   <div class="logo"><div class="logo-icon"><div class="logo-inner">▲</div></div>Trail<span>head</span></div>
   <!-- Desktop nav -->
   <div class="nav-desktop" style="display:flex;gap:8px;align-items:center">
-    <button class="btn btn-ghost" onclick="sv('feed')">📋 Posts</button>
-    <button class="btn btn-ghost" onclick="sv('vacations')">🏖 Vakanties</button>
-    <button class="btn btn-primary edit-only" onclick="showEd()">+ New Post</button>
-    <button class="btn btn-ghost login-btn" onclick="showLogin()">🔒 Inloggen</button>
+    <button class="btn btn-ghost" onclick="sv('feed')">📋 <span data-i18n="nav_posts">Posts</span></button>
+    <button class="btn btn-ghost" onclick="sv('vacations')">🏖 <span data-i18n="nav_vacations">Vakanties</span></button>
+    <button class="btn btn-primary edit-only" onclick="showEd()">+ <span data-i18n="nav_newpost">Nieuwe post</span></button>
+    <button class="btn btn-ghost login-btn" onclick="showLogin()">🔒 <span data-i18n="nav_login">Inloggen</span></button>
     <button class="btn btn-ghost logout-btn edit-only" onclick="syncAllToSupabase()" title="Synchroniseer met cloud">☁</button>
+    <div class="lang-switch"><button class="lang-btn" data-lang="nl" onclick="setLang('nl')">NL</button><button class="lang-btn" data-lang="fr" onclick="setLang('fr')">FR</button><button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button></div>
     <button class="btn btn-ghost logout-btn" onclick="doLogout()" title="Uitloggen">🔓</button>
     <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(this)">
     <div class="gear-wrap" id="gear-wrap">
@@ -919,9 +931,14 @@ body:not(.readonly) .logout-btn{display:flex}
 </nav>
 <!-- Mobile drawer -->
 <div class="nav-drawer" id="nav-drawer">
-  <button class="btn" onclick="sv('feed');closeDrawer()">📋 Posts</button>
-  <button class="btn" onclick="sv('vacations');closeDrawer()">🏖 Vakanties</button>
-  <button class="btn btn-primary edit-only" onclick="showEd();closeDrawer()">+ New Post</button>
+  <button class="btn" onclick="sv('feed');closeDrawer()"><span data-i18n="nav_posts">Posts</span></button>
+  <button class="btn" onclick="sv('vacations');closeDrawer()"><span data-i18n="nav_vacations">Vakanties</span></button>
+  <button class="btn btn-primary edit-only" onclick="showEd();closeDrawer()"><span data-i18n="nav_newpost">Nieuwe post</span></button>
+  <div class="lang-switch" style="margin:6px 0;justify-content:center">
+    <button class="lang-btn" data-lang="nl" onclick="setLang('nl')">NL</button>
+    <button class="lang-btn" data-lang="fr" onclick="setLang('fr')">FR</button>
+    <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+  </div>
   <div class="gear-sep" style="height:1px;background:rgba(255,255,255,.1);margin:2px 0"></div>
   <button class="btn" onclick="sv('groups');closeDrawer()">🗂 Groups beheren</button>
   <button class="btn" onclick="sv('persons');closeDrawer()">👥 Personen beheren</button>
@@ -935,9 +952,9 @@ body:not(.readonly) .logout-btn{display:flex}
   <div class="ph"><h2>Adventure Log</h2><p>Your outdoor stories, routes &amp; memories</p></div>
   <div class="fbar" id="fbar"></div>
   <div class="ftabs">
-    <button class="ftab active" onclick="sft('list')">📋 Posts</button>
-    <button class="ftab" id="ftab-plan" onclick="sft('plan')">📅 Planner</button>
-    <button class="ftab" id="ftab-map" onclick="sft('map')">🗺 Kaart</button>
+    <button class="ftab active" onclick="sft('list')">📋 <span data-i18n="tab_posts">Posts</span></button>
+    <button class="ftab" id="ftab-plan" onclick="sft('plan')">📅 <span data-i18n="tab_planned">Geplande activiteiten</span></button>
+    <button class="ftab" id="ftab-map" onclick="sft('map')">🗺 <span data-i18n="tab_map">Kaart</span></button>
   </div>
   <div class="ftabp active" id="ftp-list"><div class="fc" id="fc"></div><div id="pc"></div></div>
   <div class="ftabp" id="ftp-plan"><div class="fc" id="fc-plan"></div><div id="pc-plan"></div></div>
@@ -1025,10 +1042,17 @@ body:not(.readonly) .logout-btn{display:flex}
 </div>
 
 <div id="view-editor" class="view">
-  <div class="eh"><h2 id="et">New Post</h2><div class="ea"><button class="btn" onclick="sv('feed')">Cancel</button><button class="btn btn-primary" onclick="sp()">💾 Save Post</button></div></div>
-  <div class="fg"><label>Titel</label><input type="text" id="ft" placeholder="Geef je avontuur een naam…"></div>
+  <div class="eh"><h2 id="et">New Post</h2><div class="ea"><button class="btn" onclick="sv('feed')" data-i18n="ed_cancel">Annuleren</button><button class="btn btn-primary" onclick="sp()">💾 <span data-i18n="ed_save">Post opslaan</span></button></div></div>
   <div class="fg">
-    <label>Verhaal</label>
+    <div class="edlang-tabs" id="edlang-tabs">
+      <button class="edlang-tab" data-edlang="nl" onclick="switchEditLang('nl')">🇳🇱 NL</button>
+      <button class="edlang-tab" data-edlang="fr" onclick="switchEditLang('fr')">🇫🇷 FR</button>
+      <button class="edlang-tab" data-edlang="en" onclick="switchEditLang('en')">🇬🇧 EN</button>
+    </div>
+    <label data-i18n="ed_title_label">Titel</label><input type="text" id="ft" placeholder="Geef je avontuur een naam…" data-i18n-ph="ed_title_ph">
+  </div>
+  <div class="fg">
+    <label data-i18n="ed_story_label">Verhaal</label>
     <div class="md-toolbar">
       <button class="md-btn" onclick="mdWrap('fb','## ','',true)" title="Tussentitel">H2</button>
       <div class="md-btn-sep"></div>
@@ -1037,10 +1061,10 @@ body:not(.readonly) .logout-btn{display:flex}
       <div class="md-btn-sep"></div>
       <button class="md-btn" onclick="mdInsertLine('fb')" title="Horizontale lijn">―</button>
     </div>
-    <textarea id="fb" placeholder="Schrijf over je avontuur…"></textarea>
+    <textarea id="fb" placeholder="Schrijf over je avontuur…" data-i18n-ph="ed_story_ph"></textarea>
     <div style="font-size:11px;color:var(--muted);margin-top:5px;font-family:var(--sans)">💡 Gebruik <code style="background:var(--surface2);padding:1px 4px;border-radius:3px">[1]</code>, <code style="background:var(--surface2);padding:1px 4px;border-radius:3px">[2]</code>… om te verwijzen naar punten van interesse.</div>
   </div>
-  <div class="fg"><label>Categorie</label><select id="fc2"><option>Hiking</option><option>Cycling</option><option>Trail Running</option><option>Kayaking</option><option>Climbing</option><option>Skiing</option><option>Other</option></select></div>
+  <div class="fg"><label data-i18n="ed_category">Categorie</label><select id="fc2"><option>Hiking</option><option>Cycling</option><option>Trail Running</option><option>Kayaking</option><option>Climbing</option><option>Skiing</option><option>Other</option></select></div>
   <div class="fg" style="display:flex;align-items:center;gap:12px">
     <label style="margin-bottom:0;text-transform:none;font-size:14px;font-weight:500;color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:8px">
       <input type="checkbox" id="f-planned" style="width:16px;height:16px;accent-color:var(--blue);cursor:pointer">
@@ -1053,7 +1077,7 @@ body:not(.readonly) .logout-btn{display:flex}
   </div>
   <div class="fg"><label>Groepen</label><div class="gp" id="gp2"></div></div>
   <div class="fg">
-    <label>Deelnemers</label>
+    <label data-i18n="ed_participants">Deelnemers</label>
     <div class="person-chips" id="person-chips"></div>
     <p id="person-chips-empty" style="font-size:13px;color:var(--muted);font-style:italic;margin-top:4px;display:none">Nog geen personen. Voeg ze toe via ⚙ → Personen beheren.</p>
   </div>
@@ -1079,12 +1103,12 @@ body:not(.readonly) .logout-btn{display:flex}
   </div>
 
   <div class="fg">
-    <label>Foto's</label>
+    <label data-i18n="ed_photos">Foto's</label>
     <div style="display:flex;gap:8px;margin-bottom:.5rem">
-      <input type="text" id="photo-url-input" placeholder="Plak een afbeeldings-URL (https://…)" 
+      <input type="text" id="photo-url-input" placeholder="Plak een afbeeldings-URL (https://…)" data-i18n-ph="photo_url_ph" 
         style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--sans);background:var(--input-bg);color:var(--ink);outline:none"
         onkeydown="if(event.key==='Enter'){event.preventDefault();addPhotoFromUrl()}">
-      <button class="btn btn-sm" type="button" onclick="addPhotoFromUrl()">🔗 Toevoegen</button>
+      <button class="btn btn-sm" type="button" onclick="addPhotoFromUrl()">🔗 <span data-i18n="photo_url_add">Toevoegen</span></button>
     </div>
     <div class="uz" id="pz" onclick="document.getElementById('fp2').click()" ondragover="dov(event,'pz')" ondragleave="dlv('pz')" ondrop="dp(event)">
       <input type="file" id="fp2" accept="image/*" multiple onchange="lp(this.files)">
@@ -1215,6 +1239,156 @@ body:not(.readonly) .logout-btn{display:flex}
 <div class="lb" id="lb" onclick="clb()"><button class="lbx" onclick="clb()">✕</button><img id="lbi" src=""><div class="lbc" id="lbc"></div></div>
 <div class="toast" id="toast"></div>
 <script>
+/* ═══════════════════════════════════════
+   MEERTALIGHEID / I18N
+═══════════════════════════════════════ */
+let currentLang = (typeof localStorage!=='undefined' && localStorage.getItem('trailhead-lang')) || 'nl';
+const LANGS = ['nl','fr','en'];
+const LANG_LABELS = {nl:'NL', fr:'FR', en:'EN'};
+const LANG_FLAGS = {nl:'🇳🇱', fr:'🇫🇷', en:'🇬🇧'};
+
+const I18N = {
+  nl:{
+    nav_posts:'Posts', nav_vacations:'Vakanties', nav_newpost:'Nieuwe post', nav_login:'Inloggen',
+    tab_posts:'Posts', tab_planned:'Geplande activiteiten', tab_map:'Kaart',
+    ed_title_label:'Titel', ed_title_ph:'Geef je avontuur een naam…',
+    ed_story_label:'Verhaal', ed_story_ph:'Schrijf over je avontuur…',
+    ed_category:'Categorie', ed_groups:'Groups', ed_photos:"Foto's", ed_participants:'Deelnemers',
+    ed_save:'Post opslaan', ed_cancel:'Annuleren', ed_newpost:'Nieuwe Post', ed_editpost:'Post bewerken',
+    btn_edit:'Bewerken', btn_delete:'Verwijderen', btn_view:'Bekijk post',
+    sec_route:'Route', sec_stats:'Stats', sec_scores:'Scores',
+    vac_title:'Vakanties', vac_subtitle:'Groepeer je activiteiten per reis of vakantie',
+    vac_new:'Nieuwe vakantie', vac_add_activity:'Activiteit toevoegen', vac_back:'Terug naar vakanties',
+    vac_activities:'Activiteiten',
+    empty_posts_title:'Nog geen avonturen', empty_posts_body:'Begin met het loggen van je eerste avontuur.',
+    login_title:'Inloggen', login_ph:'Wachtwoord…', login_btn:'Inloggen', login_guest:'bekijk als bezoeker',
+    photo_url_ph:'Plak een afbeeldings-URL (https://…)', photo_url_add:'Toevoegen',
+    photo_add:"Foto's toevoegen", planned_badge:'Gepland',
+    score_difficulty:'Moeilijkheidsgraad', score_landscape:'Landschap', score_recommend:'Aanbeveling'
+  },
+  fr:{
+    nav_posts:'Articles', nav_vacations:'Vacances', nav_newpost:'Nouvel article', nav_login:'Connexion',
+    tab_posts:'Articles', tab_planned:'Activités prévues', tab_map:'Carte',
+    ed_title_label:'Titre', ed_title_ph:'Donnez un nom à votre aventure…',
+    ed_story_label:'Récit', ed_story_ph:'Racontez votre aventure…',
+    ed_category:'Catégorie', ed_groups:'Groupes', ed_photos:'Photos', ed_participants:'Participants',
+    ed_save:"Enregistrer l'article", ed_cancel:'Annuler', ed_newpost:'Nouvel article', ed_editpost:"Modifier l'article",
+    btn_edit:'Modifier', btn_delete:'Supprimer', btn_view:"Voir l'article",
+    sec_route:'Itinéraire', sec_stats:'Stats', sec_scores:'Notes',
+    vac_title:'Vacances', vac_subtitle:'Regroupez vos activités par voyage ou vacances',
+    vac_new:'Nouvelles vacances', vac_add_activity:'Ajouter une activité', vac_back:'Retour aux vacances',
+    vac_activities:'Activités',
+    empty_posts_title:"Pas encore d'aventures", empty_posts_body:'Commencez à enregistrer votre première aventure.',
+    login_title:'Connexion', login_ph:'Mot de passe…', login_btn:'Se connecter', login_guest:'voir en tant que visiteur',
+    photo_url_ph:"Collez une URL d'image (https://…)", photo_url_add:'Ajouter',
+    photo_add:'Ajouter des photos', planned_badge:'Prévu',
+    score_difficulty:'Difficulté', score_landscape:'Paysage', score_recommend:'Recommandation'
+  },
+  en:{
+    nav_posts:'Posts', nav_vacations:'Vacations', nav_newpost:'New post', nav_login:'Log in',
+    tab_posts:'Posts', tab_planned:'Planned activities', tab_map:'Map',
+    ed_title_label:'Title', ed_title_ph:'Give your adventure a name…',
+    ed_story_label:'Story', ed_story_ph:'Write about your adventure…',
+    ed_category:'Category', ed_groups:'Groups', ed_photos:'Photos', ed_participants:'Participants',
+    ed_save:'Save post', ed_cancel:'Cancel', ed_newpost:'New Post', ed_editpost:'Edit post',
+    btn_edit:'Edit', btn_delete:'Delete', btn_view:'View post',
+    sec_route:'Route', sec_stats:'Stats', sec_scores:'Scores',
+    vac_title:'Vacations', vac_subtitle:'Group your activities by trip or vacation',
+    vac_new:'New vacation', vac_add_activity:'Add activity', vac_back:'Back to vacations',
+    vac_activities:'Activities',
+    empty_posts_title:'No adventures yet', empty_posts_body:'Start logging your first adventure.',
+    login_title:'Log in', login_ph:'Password…', login_btn:'Log in', login_guest:'view as guest',
+    photo_url_ph:'Paste an image URL (https://…)', photo_url_add:'Add',
+    photo_add:'Add photos', planned_badge:'Planned',
+    score_difficulty:'Difficulty', score_landscape:'Landscape', score_recommend:'Recommendation'
+  }
+};
+
+function t(key){
+  return (I18N[currentLang] && I18N[currentLang][key]) || (I18N.nl && I18N.nl[key]) || key;
+}
+
+// Get the right language value from a multilingual field (with backward-compat for plain strings)
+function L18(val){
+  if(val==null) return '';
+  if(typeof val==='string') return val; // old single-language data
+  return val[currentLang] || val.nl || val.en || val.fr || Object.values(val).find(v=>v) || '';
+}
+
+function applyI18n(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    el.textContent = t(el.getAttribute('data-i18n'));
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el=>{
+    el.setAttribute('placeholder', t(el.getAttribute('data-i18n-ph')));
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach(el=>{
+    el.setAttribute('title', t(el.getAttribute('data-i18n-title')));
+  });
+  // Update language switcher active state
+  document.querySelectorAll('.lang-btn').forEach(b=>{
+    b.classList.toggle('active', b.getAttribute('data-lang')===currentLang);
+  });
+}
+
+function setLang(lang){
+  if(!LANGS.includes(lang)) return;
+  currentLang = lang;
+  try{ localStorage.setItem('trailhead-lang', lang); }catch(e){}
+  applyI18n();
+  // Re-render dynamic content so post titles/bodies switch language
+  if(typeof rf==='function') rf();
+  if(typeof renderVacations==='function' && document.getElementById('view-vacations')?.classList.contains('active')) renderVacations();
+  // If viewing a post, re-render it in the new language
+  if(currentPostId && document.getElementById('view-post')?.classList.contains('active')){
+    const p=posts.find(x=>x.id===currentPostId);
+    if(p) vp(currentPostId);
+  }
+}
+
+/* Editor multilingual state for title + body */
+let editLang = 'nl';
+let editContent = {title:{nl:'',fr:'',en:''}, body:{nl:'',fr:'',en:''}};
+
+function captureEditField(){
+  // Save current title/body field values into editContent for the active editLang
+  const tf=document.getElementById('ft'), bf=document.getElementById('fb');
+  if(tf) editContent.title[editLang] = tf.value;
+  if(bf) editContent.body[editLang] = bf.value;
+}
+
+function switchEditLang(lang){
+  if(!LANGS.includes(lang)) return;
+  captureEditField(); // save what's currently typed
+  editLang = lang;
+  // Load the chosen language's content into the fields
+  const tf=document.getElementById('ft'), bf=document.getElementById('fb');
+  if(tf) tf.value = editContent.title[lang] || '';
+  if(bf) bf.value = editContent.body[lang] || '';
+  // Update tab active state
+  document.querySelectorAll('.edlang-tab').forEach(b=>{
+    b.classList.toggle('active', b.getAttribute('data-edlang')===lang);
+  });
+}
+
+function loadEditContent(post){
+  // Populate editContent from a post (handles old plain-string format)
+  const toML = v => {
+    if(v==null) return {nl:'',fr:'',en:''};
+    if(typeof v==='string') return {nl:v,fr:'',en:''}; // old data → treat as NL
+    return {nl:v.nl||'', fr:v.fr||'', en:v.en||''};
+  };
+  editContent = { title: toML(post?post.title:null), body: toML(post?post.body:null) };
+  editLang = currentLang; // start editing in the currently selected interface language
+  const tf=document.getElementById('ft'), bf=document.getElementById('fb');
+  if(tf) tf.value = editContent.title[editLang] || '';
+  if(bf) bf.value = editContent.body[editLang] || '';
+  document.querySelectorAll('.edlang-tab').forEach(b=>{
+    b.classList.toggle('active', b.getAttribute('data-edlang')===editLang);
+  });
+}
+
+
 const DBN='trailhead',DBV=3;let db=null;
 function odb(){return new Promise((r,j)=>{const q=indexedDB.open(DBN,DBV);q.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains('posts'))d.createObjectStore('posts',{keyPath:'id'});if(!d.objectStoreNames.contains('groups'))d.createObjectStore('groups',{keyPath:'id'});if(!d.objectStoreNames.contains('persons'))d.createObjectStore('persons',{keyPath:'id'});if(!d.objectStoreNames.contains('vacations'))d.createObjectStore('vacations',{keyPath:'id'})};q.onsuccess=e=>{db=e.target.result;r(db)};q.onerror=e=>j(e.target.error)})}
 function dga(s){return new Promise((r,j)=>{try{const t=db.transaction(s,'readonly');const q=t.objectStore(s).getAll();q.onsuccess=()=>r(q.result);q.onerror=()=>r([])}catch(e){r([])}})}
@@ -1318,7 +1492,7 @@ function printPost(id, withPhotos){
   }
 
   // ── VERHAAL ──
-  const bodyHtml=p.body?`<div class="pc-body">${renderPoiRef(renderMarkdown(p.body),p.pois||[])}</div>`:'';
+  const _bodyTxt=L18(p.body);const bodyHtml=_bodyTxt?`<div class="pc-body">${renderPoiRef(renderMarkdown(_bodyTxt),p.pois||[])}</div>`:'';
 
   // ── POIs ──
   let poisHtml='';
@@ -1412,7 +1586,7 @@ function printPost(id, withPhotos){
   const printHtml=`
     <div class="pc-header">
       <div class="pc-logo">Trailhead · Adventure Log${p.planned?' · 📅 Gepland':''}</div>
-      <div class="pc-title">${esc(p.title||'Untitled')}</div>
+      <div class="pc-title">${esc(L18(p.title)||'Untitled')}</div>
       <div class="pc-meta">
         <span class="pc-tag">${esc(p.category||'Adventure')}</span>
         ${pg.map(g=>`<span class="pc-gtag">${esc(g.name)}</span>`).join('')}
@@ -2131,9 +2305,9 @@ function renderAvatarStack(personIds){
 
 /* SCORES */
 const SCORE_DEFS=[
-  {key:'moeilijkheid', label:'Moeilijkheidsgraad', icon:'⛰'},
-  {key:'landschap',    label:'Landschap',           icon:'🌄'},
-  {key:'aanbeveling',  label:'Aanbeveling',          icon:'👍'},
+  {key:'moeilijkheid', label:'Moeilijkheidsgraad', labelKey:'score_difficulty', icon:'⛰'},
+  {key:'landschap',    label:'Landschap',           labelKey:'score_landscape',  icon:'🌄'},
+  {key:'aanbeveling',  label:'Aanbeveling',          labelKey:'score_recommend',  icon:'👍'},
 ];
 
 let currentScores={}; // {moeilijkheid:3, landschap:5, aanbeveling:4}
@@ -2143,7 +2317,7 @@ function renderEditorScores(){
   if(!el) return;
   el.innerHTML=SCORE_DEFS.map(def=>`
     <div class="score-row">
-      <div class="score-label">${def.icon} ${def.label}</div>
+      <div class="score-label">${def.icon} ${t(def.labelKey)}</div>
       <div class="star-picker" id="sp-${def.key}">
         ${[1,2,3,4,5].map(n=>`<span class="score-star ${(currentScores[def.key]||0)>=n?'filled':''}"
           onclick="setScore('${def.key}',${n})"
@@ -2173,7 +2347,7 @@ function renderScoresInline(scores){
   if(!scores) return '';
   return SCORE_DEFS.filter(d=>(scores[d.key]||0)>0).map(def=>`
     <div class="score-row" style="margin-bottom:.5rem">
-      <div class="score-label">${def.icon} ${def.label}</div>
+      <div class="score-label">${def.icon} ${t(def.labelKey)}</div>
       <div class="score-stars">
         ${[1,2,3,4,5].map(n=>`<span class="score-star ${(scores[def.key]||0)>=n?'filled':''}">★</span>`).join('')}
       </div>
@@ -2195,7 +2369,7 @@ function renderScoresBlock(scores){
     <div class="scores-grid">
       ${SCORE_DEFS.filter(d=>(scores[d.key]||0)>0).map(def=>`
         <div class="score-row">
-          <div class="score-label">${def.icon} ${def.label}</div>
+          <div class="score-label">${def.icon} ${t(def.labelKey)}</div>
           <div class="score-stars">
             ${[1,2,3,4,5].map(n=>`<span class="score-star ${(scores[def.key]||0)>=n?'filled':''}">★</span>`).join('')}
           </div>
@@ -2379,7 +2553,7 @@ function openFullscreenMap(){
   const p=posts.find(x=>x.id===currentPostId);
   if(!p) return;
   fsCurrentPost=p;
-  document.getElementById('map-fs-title').textContent=p.title||'Route';
+  document.getElementById('map-fs-title').textContent=L18(p.title)||'Route';
   document.getElementById('map-fs-overlay').classList.add('open');
   document.body.style.overflow='hidden';
   document.querySelectorAll('.fs-layer-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
@@ -2810,7 +2984,7 @@ function renderPlanner(){
       <div class="planned-bar">📅 Gepland · ${fd(p.date)}</div>
       <div class="pcb" onclick="vp('${p.id}')">
         <div class="pcbl">
-          <span class="pct">${esc(p.title)||'Untitled'}</span>
+          <span class="pct">${esc(L18(p.title))||'Untitled'}</span>
           <div class="pcm">
             <span class="tag">${p.category||'Adventure'}</span>
             <span class="planned-badge">📅 Gepland</span>
@@ -2846,7 +3020,7 @@ function renderPlanner(){
 async function executePost(id){
   const p=posts.find(x=>x.id===id);
   if(!p) return;
-  if(!confirm(`"${p.title}" markeren als uitgevoerd?
+  if(!confirm(`"${L18(p.title)}" markeren als uitgevoerd?
 De post verschijnt dan in de normale feed.`)) return;
   p.planned=false;
   p.date=Date.now(); // update to today
@@ -3515,7 +3689,7 @@ function renderVacPostList(v){
     return`<div class="vac-post-item" onclick="vp('${p.id}')">
       ${thumb}
       <div class="vac-post-info">
-        <div class="vac-post-title">${esc(p.title||'Untitled')}</div>
+        <div class="vac-post-title">${esc(L18(p.title)||'Untitled')}</div>
         <div class="vac-post-meta">${fd(p.date)}${parseFloat(dist)>0?' · '+dist+' km':''}</div>
       </div>
       <button class="btn btn-sm btn-danger edit-only" onclick="event.stopPropagation();removeFromVac('${v.id}','${p.id}')">✕</button>
@@ -3539,7 +3713,7 @@ function renderPostPicker(filter){
   const list=document.getElementById('vd-picker-list');
   const available=[...posts]; // include planned posts
   const filtered=filter
-    ?available.filter(p=>(p.title||'').toLowerCase().includes(filter.toLowerCase()))
+    ?available.filter(p=>L18(p.title).toLowerCase().includes(filter.toLowerCase()))
     :available;
   if(!filtered.length){
     list.innerHTML=`<div style="padding:.75rem;text-align:center;color:var(--muted);font-size:13px">Geen posts gevonden</div>`;
@@ -3556,7 +3730,7 @@ function renderPostPicker(filter){
         ?`<img class="post-picker-thumb" src="${p.photos[bi].src}" loading="lazy">`
         :`<div class="post-picker-thumb" style="display:flex;align-items:center;justify-content:center;font-size:16px">🌲</div>`}
       <div class="post-picker-info">
-        <div class="post-picker-title">${esc(p.title||'Untitled')}</div>
+        <div class="post-picker-title">${esc(L18(p.title)||'Untitled')}</div>
         <div class="post-picker-meta">${fd(p.date)}${parseFloat(dist)>0?' · '+dist+' km':''} · ${p.category||'Adventure'}${p.planned?' · <span style="color:var(--blue);font-weight:600">📅 Gepland</span>':''}</div>
       </div>
     </label>`;
@@ -3806,7 +3980,7 @@ async function rom(){
     const pg=(p.groups||[]).map(gid=>groups.find(g=>g.id===gid)).filter(Boolean);
     const pop=`<div class="opop">
       ${p.photos&&p.photos.length?`<img src="${p.photos[Math.min(p.bannerIndex||0,p.photos.length-1)].src}" style="width:100%;height:80px;object-fit:cover;border-radius:5px;margin-bottom:8px;display:block">`:''}
-      <div class="opop-title">${esc(p.title||'Untitled')}</div>
+      <div class="opop-title">${esc(L18(p.title)||'Untitled')}</div>
       <div class="opop-meta"><span>${fd(p.date)}</span>${tracks.length?`<span class="opop-stat">📍 ${td} km · ↑${tg}m</span>`:''}</div>
       ${pg.filter(g=>g.name.toLowerCase()!==(p.category||'').toLowerCase()).length?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">${pg.filter(g=>g.name.toLowerCase()!==(p.category||'').toLowerCase()).map(g=>`<span style="background:var(--gtag-bg);color:var(--gtag-text);padding:2px 7px;border-radius:10px;font-size:11px;font-weight:600">${esc(g.name)}</span>`).join('')}</div>`:''}
       <button class="btn btn-sm btn-primary" onclick="vp('${p.id}')" style="width:100%;justify-content:center;margin-top:2px">Bekijk post →</button>
@@ -3825,7 +3999,7 @@ async function rom(){
   if(ab.length)om.fitBounds(L.latLngBounds(ab),{padding:[30,30]});
   const leg=document.getElementById('mleg');
   leg.innerHTML=`<span style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-right:4px">${vi.length} route${vi.length!==1?'s':''}</span>`
-    +vi.map((p,i)=>`<div class="mli"><div class="mll" style="background:${PC[i%PC.length]}${p.planned?';border:1.5px dashed #fff;box-shadow:inset 0 0 0 1px '+PC[i%PC.length]:''}"></div><span style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted)">${p.planned?'📅 ':''}${esc(p.title||'Untitled')}</span></div>`).join('');
+    +vi.map((p,i)=>`<div class="mli"><div class="mll" style="background:${PC[i%PC.length]}${p.planned?';border:1.5px dashed #fff;box-shadow:inset 0 0 0 1px '+PC[i%PC.length]:''}"></div><span style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted)">${p.planned?'📅 ':''}${esc(L18(p.title)||'Untitled')}</span></div>`).join('');
   setTimeout(()=>om.invalidateSize(),100);
 }
 
@@ -3846,7 +4020,7 @@ function sf(id){af=id;rfb();if(cft==='list')rf();else rom()}
 function rf(){
   const c=document.getElementById('pc'),ce=document.getElementById('fc');
   let vi=[...posts].reverse().filter(p=>!p.planned);if(af)vi=vi.filter(p=>(p.groups||[]).includes(af));
-  if(!posts.length){ce.textContent='';c.innerHTML=`<div class="es"><div class="icon">🏔️</div><h3>Nog geen avonturen</h3><p>Klik op <strong>+ New Post</strong> om te starten.</p></div>`;return}
+  if(!posts.length){ce.textContent='';c.innerHTML=`<div class="es"><div class="icon">🏔️</div><h3>${t('empty_posts_title')}</h3><p>${t('empty_posts_body')}</p></div>`;return}
   if(!vi.length){const gn=groups.find(g=>g.id===af)?.name||'deze groep';ce.textContent='';c.innerHTML=`<div class="es"><div class="icon">🗂️</div><h3>Geen posts in "${esc(gn)}"</h3></div>`;return}
   ce.textContent=af?`${vi.length} post${vi.length!==1?'s':''} in "${esc(groups.find(g=>g.id===af)?.name||'')}"`:`${vi.length} post${vi.length!==1?'s':''}`;
   c.innerHTML=vi.map(p=>{
@@ -3860,7 +4034,7 @@ function rf(){
     return`<div class="pc" id="card-${p.id}">
       <div class="pcb" onclick="vp('${p.id}')">
         <div class="pcbl">
-          <span class="pct">${esc(p.title)||'Untitled'}</span>
+          <span class="pct">${esc(L18(p.title))||'Untitled'}</span>
           <div class="pcm">
             <span class="tag">${p.category||'Adventure'}</span>
             ${pg.filter(g=>g.name.toLowerCase()!==(p.category||'').toLowerCase()).map(g=>`<span class="gtag">${esc(g.name)}</span>`).join('')}
@@ -4010,14 +4184,14 @@ function showEd(id){
     const p=posts.find(x=>x.id===id);
     document.getElementById('et').textContent='Post bewerken';
     document.getElementById('f-planned').checked=p.planned||false;
-    document.getElementById('ft').value=p.title||'';document.getElementById('fb').value=p.body||'';document.getElementById('fc2').value=p.category||'Hiking';
+    loadEditContent(p);document.getElementById('fc2').value=p.category||'Hiking';
     ctr=(p.tracks||[]).map(t=>({...t,stats:t.stats?{...t.stats}:null}));
     cph=p.photos?p.photos.map(ph=>({...ph})):[];cpn=p.pins?JSON.parse(JSON.stringify(p.pins)):{};cg=[...(p.groups||[])];cbi=p.bannerIndex||0;
     cib=(p.infoBlocks||[]).map(b=>({...b,content:Array.isArray(b.content)?[...b.content]:b.content,tlConfig:{...(b.tlConfig||{})},tlNotes:(b.tlNotes||[]).map(n=>({...n}))}));
     currentConns=(p.connections||[]).map(c=>({...c}));currentPois=(p.pois||[]).map(p=>({...p}));currentPersons=[...(p.persons||[])];currentScores={...(p.scores||{})};rtl();rphl();ribe();renderConnList();renderPoiList();renderPersonChips();renderEditorScores();setTimeout(bpe,150); // always show map
   } else {
     document.getElementById('et').textContent='Nieuwe Post';
-    document.getElementById('ft').value='';document.getElementById('fb').value='';document.getElementById('fc2').value='Hiking';
+    loadEditContent(null);document.getElementById('fc2').value='Hiking';
     document.getElementById('f-planned').checked=false;
     setTimeout(bpe,150);
   }
@@ -4033,7 +4207,13 @@ async function ep(id){
   showEd(id);
 }
 async function sp(){
-  const title=document.getElementById('ft').value.trim();if(!title){toast('Voeg een titel toe');return}
+  captureEditField(); // save current field into editContent for active language
+  // Build multilingual title/body, trimming each language
+  const titleML={nl:(editContent.title.nl||'').trim(), fr:(editContent.title.fr||'').trim(), en:(editContent.title.en||'').trim()};
+  const bodyML={nl:(editContent.body.nl||'').trim(), fr:(editContent.body.fr||'').trim(), en:(editContent.body.en||'').trim()};
+  // Require at least one language title
+  const title = titleML.nl || titleML.fr || titleML.en;
+  if(!title){toast('Voeg een titel toe');return}
   ctr.forEach((t,i)=>{const inp=document.getElementById('tn-'+t.id);if(inp)ctr[i].name=inp.value||('Track '+(i+1))});
   cph.forEach((_,i)=>{const inp=document.getElementById('cp-'+i);if(inp)cph[i].caption=inp.value});
   sib();syncConns();syncPois();
@@ -4044,7 +4224,7 @@ async function sp(){
   if(!actGroup){actGroup={id:'act-'+cat.toLowerCase().replace(/\s+/g,'-'),name:cat,isActivity:true};groups.push(actGroup);await dpu('groups',actGroup)}
   const finalGroups=[...new Set([...cg,actGroup.id])];
   const planned=document.getElementById('f-planned').checked;
-  const p={id:eid||Date.now().toString(),title,body:document.getElementById('fb').value.trim(),category:cat,planned,groups:finalGroups,date:eid?(posts.find(x=>x.id===eid)||{}).date||Date.now():Date.now(),tracks:ctr,connections:currentConns,pois:currentPois,persons:currentPersons,scores:currentScores,photos:cph,pins:cpn,bannerIndex:cbi,_isFullyLoaded:true,infoBlocks:cib.filter(b=>{if(b.type==='timeline')return b.title.trim()||(b.tlNotes||[]).length;return b.title.trim()||(Array.isArray(b.content)?b.content.some(i=>i.trim()):b.content?.trim())})};
+  const p={id:eid||Date.now().toString(),title:titleML,body:bodyML,category:cat,planned,groups:finalGroups,date:eid?(posts.find(x=>x.id===eid)||{}).date||Date.now():Date.now(),tracks:ctr,connections:currentConns,pois:currentPois,persons:currentPersons,scores:currentScores,photos:cph,pins:cpn,bannerIndex:cbi,_isFullyLoaded:true,infoBlocks:cib.filter(b=>{if(b.type==='timeline')return b.title.trim()||(b.tlNotes||[]).length;return b.title.trim()||(Array.isArray(b.content)?b.content.some(i=>i.trim()):b.content?.trim())})};
   if(eid){const i=posts.findIndex(x=>x.id===eid);if(i>-1)posts[i]=p}else posts.push(p);
   await dpu('posts',p);
   fullPostCache[p.id]=p;
@@ -4369,8 +4549,8 @@ async function vp(id){
   // Update page title and OG tags
   const _p=posts.find(x=>x.id===id);
   if(_p){
-    const _title=(_p.title||'Post')+' — Trailhead';
-    const _desc=_p.body?_p.body.slice(0,150).replace(/[#*_]/g,'')+'…':'Trailhead Adventure Log';
+    const _title=(L18(_p.title)||'Post')+' — Trailhead';
+    const _descTxt=L18(_p.body);const _desc=_descTxt?_descTxt.slice(0,150).replace(/[#*_]/g,'')+'…':'Trailhead Adventure Log';
     const _img=_p.photos&&_p.photos.length?_p.photos[_p.bannerIndex||0]?.src:'';
     document.title=_title;
     document.getElementById('og-title')?.setAttribute('content',_title);
@@ -4382,8 +4562,8 @@ async function vp(id){
   const pg=(p.groups||[]).map(gid=>groups.find(g=>g.id===gid)).filter(Boolean);
   const mh=`<span class="tag">${p.category||'Adventure'}</span>${p.planned?'<span class="planned-badge">📅 Gepland</span>':''} ${pg.filter(g=>g.name.toLowerCase()!==(p.category||'').toLowerCase()).map(g=>`<span class="gtag">${esc(g.name)}</span>`).join('')}<span>${fd(p.date)}</span>`;
   const h=document.getElementById('pvh');
-  if(p.photos&&p.photos.length){const bi=Math.min(p.bannerIndex||0,p.photos.length-1);h.innerHTML=`<div class="hero"><img src="${p.photos[bi].src}"><div class="hero-ov"></div><div class="hero-tx"><h1>${esc(p.title||'Untitled')}</h1><div class="hm">${mh}</div></div></div>`}
-  else{h.innerHTML=`<h1 class="pti">${esc(p.title||'Untitled')}</h1><div class="pmr">${mh}</div>`}
+  if(p.photos&&p.photos.length){const bi=Math.min(p.bannerIndex||0,p.photos.length-1);h.innerHTML=`<div class="hero"><img src="${p.photos[bi].src}"><div class="hero-ov"></div><div class="hero-tx"><h1>${esc(L18(p.title)||'Untitled')}</h1><div class="hm">${mh}</div></div></div>`}
+  else{h.innerHTML=`<h1 class="pti">${esc(L18(p.title)||'Untitled')}</h1><div class="pmr">${mh}</div>`}
   // Scores block in sidebar
   const scoresEl=document.getElementById('pv-scores');
   const scoresSec=document.getElementById('sb-scores-section');
@@ -4393,7 +4573,7 @@ async function vp(id){
   // Avatar stack
   const avatarEl=document.getElementById('pv-avatars');
   if(avatarEl) avatarEl.innerHTML=renderAvatarStack(p.persons||[]);
-  const pvb=document.getElementById('pvb');pvb.className='pbody pbody-rendered';pvb.innerHTML=renderPoiRef(renderMarkdown(p.body||''),p.pois||[]);
+  const pvb=document.getElementById('pvb');pvb.className='pbody pbody-rendered';pvb.innerHTML=renderPoiRef(renderMarkdown(L18(p.body)||''),p.pois||[]);
   const ib=p.infoBlocks||[];document.getElementById('tib').textContent=`📋 Info${ib.length?` (${ib.length})`:''}`;
   const tr=p.tracks||[];
   const ms=document.getElementById('pvms');const hasTracks=tr.some(t=>t.stats&&t.stats.lats);const hasPois=(p.pois||[]).some(poi=>poi.lat!=null);const hasConns=(p.connections||[]).some(c=>c.fromCoord||c.toCoord);if(hasTracks||hasPois||hasConns){ms.style.display='block';mp=p}else{ms.style.display='none';mp=false}
@@ -4651,6 +4831,7 @@ function fd(ts){return new Date(ts).toLocaleDateString('nl-BE',{day:'numeric',mo
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
 window.addEventListener('resize',()=>{if(vm)vm.invalidateSize();if(em)em.invalidateSize();if(om)om.invalidateSize();if(sidebarMap)sidebarMap.invalidateSize();});
 checkAuth();
+applyI18n();
 window.addEventListener('resize',()=>{if(typeof invalidateAllMaps==='function')invalidateAllMaps();});
 if(typeof L!=="undefined"){boot().then(initRouting);}else{window.addEventListener("load",()=>boot().then(initRouting));}
 </script>

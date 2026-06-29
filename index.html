@@ -1315,6 +1315,27 @@ function L18(val){
   return val[currentLang] || val.nl || val.en || val.fr || Object.values(val).find(v=>v) || '';
 }
 
+// Normalize any value to a multilingual object {nl,fr,en} (old strings become the nl value)
+function toMLobj(v){
+  if(v==null) return {nl:'',fr:'',en:''};
+  if(typeof v==='string') return {nl:v, fr:'', en:''};
+  return {nl:v.nl||'', fr:v.fr||'', en:v.en||''};
+}
+
+// In the EDITOR: show the value for the language currently being edited (editLang)
+function L18ed(val){
+  if(val==null) return '';
+  if(typeof val==='string') return val;
+  return val[typeof editLang!=='undefined'?editLang:'nl'] || '';
+}
+
+// In the EDITOR: write a value into the editLang sub-field of an object's field
+function setMLField(obj, field, value){
+  if(!obj) return;
+  if(!obj[field] || typeof obj[field]==='string') obj[field]=toMLobj(obj[field]);
+  obj[field][typeof editLang!=='undefined'?editLang:'nl']=value;
+}
+
 function applyI18n(){
   document.querySelectorAll('[data-i18n]').forEach(el=>{
     el.textContent = t(el.getAttribute('data-i18n'));
@@ -1359,12 +1380,18 @@ function captureEditField(){
 
 function switchEditLang(lang){
   if(!LANGS.includes(lang)) return;
-  captureEditField(); // save what's currently typed
+  captureEditField(); // save title/body currently typed
+  // Also capture POI + caption inputs before switching
+  if(typeof syncPois==='function') syncPois();
+  document.querySelectorAll('[id^="cp-"]').forEach((inp,i)=>{ if(cph[i]) setMLField(cph[i],'caption',inp.value); });
   editLang = lang;
-  // Load the chosen language's content into the fields
+  // Load the chosen language's title/body
   const tf=document.getElementById('ft'), bf=document.getElementById('fb');
   if(tf) tf.value = editContent.title[lang] || '';
   if(bf) bf.value = editContent.body[lang] || '';
+  // Re-render POI list and photo list so their inputs show the new language
+  if(typeof renderPoiList==='function') renderPoiList();
+  if(typeof rphl==='function') rphl();
   // Update tab active state
   document.querySelectorAll('.edlang-tab').forEach(b=>{
     b.classList.toggle('active', b.getAttribute('data-edlang')===lang);
@@ -1496,7 +1523,7 @@ function printPost(id, withPhotos){
 
   // ── POIs ──
   let poisHtml='';
-  const pois=(p.pois||[]).filter(poi=>poi.name||poi.note);
+  const pois=(p.pois||[]).filter(poi=>L18(poi.name)||L18(poi.note));
   if(pois.length){
     poisHtml=`<div style="page-break-inside:avoid;margin-bottom:6mm">
       <div class="pc-section-label">Punten van interesse</div>
@@ -1505,8 +1532,8 @@ function printPost(id, withPhotos){
         return`<div style="display:flex;gap:3mm;margin-bottom:3mm;page-break-inside:avoid">
           <div style="width:5mm;height:5mm;border-radius:50%;background:#9c5a2d;color:#fff;font-size:7pt;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:Inter,sans-serif">${i+1}</div>
           <div>
-            <div style="font-size:9pt;font-weight:600;color:#1c1410;font-family:Inter,sans-serif">${emoji} ${esc(poi.name||'Punt '+(i+1))}</div>
-            ${poi.note?`<div style="font-size:8pt;color:#7a6a58;font-family:'Source Serif 4',Georgia,serif;font-style:italic">${esc(poi.note)}</div>`:''}
+            <div style="font-size:9pt;font-weight:600;color:#1c1410;font-family:Inter,sans-serif">${emoji} ${esc(L18(poi.name)||'Punt '+(i+1))}</div>
+            ${L18(poi.note)?`<div style="font-size:8pt;color:#7a6a58;font-family:'Source Serif 4',Georgia,serif;font-style:italic">${esc(L18(poi.note))}</div>`:''}
           </div>
         </div>`;
       }).join('')}
@@ -1576,7 +1603,7 @@ function printPost(id, withPhotos){
         ${p.photos.map(ph=>`
           <div>
             <img src="${ph.src}" style="width:100%;height:40mm;object-fit:cover;border-radius:2mm;display:block">
-            ${ph.caption?`<div style="font-size:7pt;color:#7a6a58;font-style:italic;font-family:'Source Serif 4',Georgia,serif;margin-top:1mm">${esc(ph.caption)}</div>`:''}
+            ${L18(ph.caption)?`<div style="font-size:7pt;color:#7a6a58;font-style:italic;font-family:'Source Serif 4',Georgia,serif;margin-top:1mm">${esc(L18(ph.caption))}</div>`:''}
           </div>`).join('')}
       </div>
     </div>`;
@@ -1814,7 +1841,7 @@ function renderPoiRef(text, pois){
     const poi=pois[idx];
     if(!poi) return match; // no such POI, leave as-is
     const emoji=POI_EMOJI[poi.type]||'📍';
-    return `<span class="poi-ref" onclick="zoomToPoiOnMap('${poi.id}')" title="${esc(poi.name||'Punt '+num)}">${num}</span>`;
+    return `<span class="poi-ref" onclick="zoomToPoiOnMap('${poi.id}')" title="${esc(L18(poi.name)||'Punt '+num)}">${num}</span>`;
   });
 }
 
@@ -1862,7 +1889,7 @@ let poiPlacingId=null; // id of poi waiting for map click
 let editorPoiMarkers={}; // id -> L.Marker
 
 function addPoi(){
-  const poi={id:Date.now().toString(),type:'pin',name:'',note:'',lat:null,lng:null};
+  const poi={id:Date.now().toString(),type:'pin',name:{nl:'',fr:'',en:''},note:{nl:'',fr:'',en:''},lat:null,lng:null};
   currentPois.push(poi);
   renderPoiList();
   setTimeout(()=>{const el=document.getElementById('poin-'+poi.id);if(el)el.focus()},50);
@@ -1904,8 +1931,8 @@ function syncPois(){
     const n=document.getElementById('poin-'+p.id);
     const no=document.getElementById('poino-'+p.id);
     if(t)p.type=t.value;
-    if(n)p.name=n.value;
-    if(no)p.note=no.value;
+    if(n)setMLField(p,'name',n.value);
+    if(no)setMLField(p,'note',no.value);
   });
 }
 
@@ -1926,14 +1953,14 @@ function renderPoiList(){
         <span class="poi-handle" title="Versleep om volgorde te wijzigen">⠿</span>
         <div class="poi-num">${i+1}</div>
         <select class="poi-type-sel" id="poit-${p.id}" onchange="currentPois.find(x=>x.id==='${p.id}').type=this.value;renderPoiList()">${typeOpts.replace(`value="${p.type}"`,`value="${p.type}" selected`)}</select>
-        <input class="poi-name-inp" id="poin-${p.id}" value="${esc(p.name)}" placeholder="Naam van de locatie…" oninput="currentPois.find(x=>x.id==='${p.id}').name=this.value">
+        <input class="poi-name-inp" id="poin-${p.id}" value="${esc(L18ed(p.name))}" placeholder="Naam van de locatie…" oninput="setMLField(currentPois.find(x=>x.id==='${p.id}'),'name',this.value)">
         <button class="btn btn-sm ${poiPlacingId===p.id?'btn-primary':''}" onclick="startPlacePoi('${p.id}')" title="Klik om op kaart te plaatsen">
           ${p.lat!==null?'📍 Verplaats':'📍 Plaats op kaart'}
         </button>
         <button class="btn btn-sm btn-danger" onclick="removePoi('${p.id}')">✕</button>
       </div>
       <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
-        <input class="poi-note-inp" style="flex:1" id="poino-${p.id}" value="${esc(p.note||'')}" placeholder="Notitie (optioneel)…" oninput="currentPois.find(x=>x.id==='${p.id}').note=this.value">
+        <input class="poi-note-inp" style="flex:1" id="poino-${p.id}" value="${esc(L18ed(p.note))}" placeholder="Notitie (optioneel)…" oninput="setMLField(currentPois.find(x=>x.id==='${p.id}'),'note',this.value)">
         ${cph.length?`<div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
           <span style="font-size:11px;color:var(--muted);font-family:var(--sans)">📷</span>
           <select class="conn-type-sel" style="font-size:12px;padding:4px 6px" onchange="linkPoiPhoto('${p.id}',this.value)">
@@ -2085,8 +2112,8 @@ function addPoiMarkerToMap(map,poi,num,isEditor){
   const popupPhoto=photo?`<img src="${photo.src}" onclick="olb('${photo.src}','')" style="width:100%;height:100px;object-fit:cover;border-radius:5px;display:block;cursor:pointer;margin-bottom:5px">`:'';
   const popup=`<div style="font-family:var(--sans);font-size:13px;min-width:150px">
     ${popupPhoto}
-    <div style="font-weight:600;margin-bottom:3px">${emoji} ${esc(poi.name||'Punt '+num)}</div>
-    ${poi.note?`<div style="color:#666;font-style:italic">${esc(poi.note)}</div>`:''}
+    <div style="font-weight:600;margin-bottom:3px">${emoji} ${esc(L18(poi.name)||'Punt '+num)}</div>
+    ${L18(poi.note)?`<div style="color:#666;font-style:italic">${esc(L18(poi.note))}</div>`:''}
     ${!isEditor?`<button onclick="highlightPoiBlock('${poi.id}')" style="margin-top:6px;width:100%;padding:4px 8px;background:var(--rust);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-family:var(--sans)">📋 Bekijk in tekst</button>`:''}
   </div>`;
   const m=L.marker([poi.lat,poi.lng],{icon,draggable:isEditor}).addTo(map).bindPopup(popup,{maxWidth:200});
@@ -2681,7 +2708,7 @@ fsPl.on('mouseout',()=>{
       Object.entries(p.pins).forEach(([idx,latlng])=>{
         if(poiLinkedPhotos.has(parseInt(idx)))return; // skip - shown as POI pin
         const ph=p.photos[parseInt(idx)];if(!ph)return;
-        const cap=ph.caption||'';
+        const cap=L18(ph.caption)||'';
         const icon=L.divIcon({html:`<div style="width:40px;height:40px;border-radius:50%;background:#222;border:3px solid #7aaa50;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.5)"><img src="${ph.src}" style="width:100%;height:100%;object-fit:cover;display:block"></div>`,iconSize:[44,44],iconAnchor:[22,22],popupAnchor:[0,-28],className:''});
         L.marker([latlng.lat,latlng.lng],{icon}).addTo(fsMap).bindPopup(`<div class="ppop"><img src="${ph.src}" onclick="olb('${ph.src}','${esc(cap)}')">${cap?`<div class="ppop-cap">${esc(cap)}</div>`:''}<button onclick="olb('${ph.src}','${esc(cap)}')" style="width:100%;padding:5px 8px;background:var(--moss);color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-family:var(--sans);margin-top:6px">🔍 Volledig scherm</button></div>`,{maxWidth:240});
       });
@@ -2939,7 +2966,7 @@ function initPostSidebar(p){
         if(poiLinkedPhotos.has(parseInt(idx)))return;      const ph=p.photos[parseInt(idx)];if(!ph)return;
       const icon=L.divIcon({html:`<div style="width:28px;height:28px;border-radius:50%;background:#222;border:2px solid #7aaa50;overflow:hidden;box-shadow:0 1px 5px rgba(0,0,0,.4)"><img src="${ph.src}" style="width:100%;height:100%;object-fit:cover;display:block"></div>`,iconSize:[36,36],iconAnchor:[18,18],popupAnchor:[0,-22],className:''});
       L.marker([latlng.lat,latlng.lng],{icon}).addTo(sidebarMap)
-        .bindPopup(`<div style="min-width:160px"><img src="${ph.src}" onclick="olb('${ph.src}','${esc(ph.caption||'')}')" style="width:100%;height:110px;object-fit:cover;border-radius:4px;display:block;cursor:pointer;margin-bottom:4px">${ph.caption?`<div style="font-size:11px;font-style:italic;color:#666;margin-top:4px">${esc(ph.caption)}</div>`:''}<button onclick="olb('${ph.src}','${esc(ph.caption||'')}')" style="width:100%;padding:4px;background:var(--moss);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--sans);margin-top:5px">🔍 Vergroot</button></div>`,{maxWidth:180});
+        .bindPopup(`<div style="min-width:160px"><img src="${ph.src}" onclick="olb('${ph.src}','${esc(L18(ph.caption)||'')}')" style="width:100%;height:110px;object-fit:cover;border-radius:4px;display:block;cursor:pointer;margin-bottom:4px">${L18(ph.caption)?`<div style="font-size:11px;font-style:italic;color:#666;margin-top:4px">${esc(L18(ph.caption))}</div>`:''}<button onclick="olb('${ph.src}','${esc(L18(ph.caption)||'')}')" style="width:100%;padding:4px;background:var(--moss);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--sans);margin-top:5px">🔍 Vergroot</button></div>`,{maxWidth:180});
     });
   }
 
@@ -4186,9 +4213,9 @@ function showEd(id){
     document.getElementById('f-planned').checked=p.planned||false;
     loadEditContent(p);document.getElementById('fc2').value=p.category||'Hiking';
     ctr=(p.tracks||[]).map(t=>({...t,stats:t.stats?{...t.stats}:null}));
-    cph=p.photos?p.photos.map(ph=>({...ph})):[];cpn=p.pins?JSON.parse(JSON.stringify(p.pins)):{};cg=[...(p.groups||[])];cbi=p.bannerIndex||0;
+    cph=p.photos?p.photos.map(ph=>({...ph, caption:toMLobj(ph.caption)})):[];cpn=p.pins?JSON.parse(JSON.stringify(p.pins)):{};cg=[...(p.groups||[])];cbi=p.bannerIndex||0;
     cib=(p.infoBlocks||[]).map(b=>({...b,content:Array.isArray(b.content)?[...b.content]:b.content,tlConfig:{...(b.tlConfig||{})},tlNotes:(b.tlNotes||[]).map(n=>({...n}))}));
-    currentConns=(p.connections||[]).map(c=>({...c}));currentPois=(p.pois||[]).map(p=>({...p}));currentPersons=[...(p.persons||[])];currentScores={...(p.scores||{})};rtl();rphl();ribe();renderConnList();renderPoiList();renderPersonChips();renderEditorScores();setTimeout(bpe,150); // always show map
+    currentConns=(p.connections||[]).map(c=>({...c}));currentPois=(p.pois||[]).map(po=>({...po, name:toMLobj(po.name), note:toMLobj(po.note)}));currentPersons=[...(p.persons||[])];currentScores={...(p.scores||{})};rtl();rphl();ribe();renderConnList();renderPoiList();renderPersonChips();renderEditorScores();setTimeout(bpe,150); // always show map
   } else {
     document.getElementById('et').textContent='Nieuwe Post';
     loadEditContent(null);document.getElementById('fc2').value='Hiking';
@@ -4215,7 +4242,7 @@ async function sp(){
   const title = titleML.nl || titleML.fr || titleML.en;
   if(!title){toast('Voeg een titel toe');return}
   ctr.forEach((t,i)=>{const inp=document.getElementById('tn-'+t.id);if(inp)ctr[i].name=inp.value||('Track '+(i+1))});
-  cph.forEach((_,i)=>{const inp=document.getElementById('cp-'+i);if(inp)cph[i].caption=inp.value});
+  cph.forEach((_,i)=>{const inp=document.getElementById('cp-'+i);if(inp)setMLField(cph[i],'caption',inp.value)});
   sib();syncConns();syncPois();
   toast('Verbindingen ophalen…');
   await resolveConnCoords();
@@ -4375,7 +4402,7 @@ function rphl(){
       <span class="ph-handle" title="Versleep om volgorde te wijzigen">⠿</span>
       <img class="pht" src="${ph.src}" loading="lazy" onclick="sph(${i})">
       <div class="phf">
-        <input id="cp-${i}" type="text" placeholder="Bijschrift…" value="${esc(ph.caption||'')}" oninput="cph[${i}].caption=this.value">
+        <input id="cp-${i}" type="text" placeholder="Bijschrift…" value="${esc(L18ed(ph.caption))}" oninput="setMLField(cph[${i}],'caption',this.value)">
         <div class="phm">
           <span>${esc(ph.name)}</span>
           ${cpn[i]?`<span class="pt">📌 gepind</span>`:''}
@@ -4646,7 +4673,7 @@ async function vp(id){
       }
     })},80);
   }else es.style.display='none';
-  const ps2=document.getElementById('pvps');if(p.photos&&p.photos.length){ps2.style.display='block';document.getElementById('pvg').innerHTML=p.photos.map(ph=>`<div class="gi"><img src="${ph.src}" loading="lazy" onclick="olb('${ph.src}','${esc(ph.caption||'')}')"> ${ph.caption?`<div class="gc2">${esc(ph.caption)}</div>`:''}</div>`).join('')}else ps2.style.display='none';
+  const ps2=document.getElementById('pvps');if(p.photos&&p.photos.length){ps2.style.display='block';document.getElementById('pvg').innerHTML=p.photos.map(ph=>`<div class="gi"><img src="${ph.src}" loading="lazy" onclick="olb('${ph.src}','${esc(L18(ph.caption)||'')}')"> ${L18(ph.caption)?`<div class="gc2">${esc(L18(ph.caption))}</div>`:''}</div>`).join('')}else ps2.style.display='none';
   // POI section
   const pvps2=document.getElementById('pvps');
   const pois=p.pois||[];
@@ -4661,11 +4688,11 @@ async function vp(id){
             <div class="poi-card-header" onclick="togglePoiCard('poib-${poi.id}','poic-${poi.id}');highlightPoiMarker('${poi.id}')">
               <div class="poi-card-num">${i+1}</div>
               <div class="poi-card-icon">${emoji}</div>
-              <div class="poi-card-name">${esc(poi.name||'Punt '+(i+1))}</div>
+              <div class="poi-card-name">${esc(L18(poi.name)||'Punt '+(i+1))}</div>
               <span class="poi-card-chevron" id="poic-${poi.id}">▾</span>
             </div>
             <div class="poi-card-body" id="poib-${poi.id}">
-              ${poi.note?esc(poi.note):'<span style="color:var(--muted);font-style:italic">Geen notitie.</span>'}
+              ${L18(poi.note)?esc(L18(poi.note)):'<span style="color:var(--muted);font-style:italic">Geen notitie.</span>'}
             </div>
           </div>`;
         }).join('');
@@ -4768,7 +4795,7 @@ ab.push(...c);const di=col=>L.divIcon({html:`<div style="background:${col};width
 (p.pois||[]).forEach(poi=>{if(poi.lat!=null&&poi.lng!=null)ab.push([poi.lat,poi.lng])});
 if(ab.length>1)vm.fitBounds(L.latLngBounds(ab),{padding:[24,24]});
 else if(ab.length===1)vm.setView(ab[0],14);
-else vm.setView([50.85,4.35],8);if(p.pins&&p.photos){Object.entries(p.pins).forEach(([idx,latlng])=>{const ph=p.photos[parseInt(idx)];if(!ph)return;const cap=ph.caption||'';const icon=L.divIcon({html:`<div style="width:40px;height:40px;border-radius:50%;background:#222;border:3px solid #7aaa50;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.5)"><img src="${ph.src}" style="width:100%;height:100%;object-fit:cover;display:block"></div>`,iconSize:[44,44],iconAnchor:[22,22],popupAnchor:[0,-28],className:''});L.marker([latlng.lat,latlng.lng],{icon}).addTo(vm).bindPopup(`<div class="ppop"><img src="${ph.src}" onclick="olb('${ph.src}','${esc(cap)}')">${cap?`<div class="ppop-cap">${esc(cap)}</div>`:''}<button onclick="olb('${ph.src}','${esc(cap)}')" style="width:100%;padding:5px 8px;background:var(--moss);color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-family:var(--sans);margin-top:6px">🔍 Volledig scherm</button></div>`,{maxWidth:240})})}(p.connections||[]).forEach(c=>drawConnOnMap(vm,c));
+else vm.setView([50.85,4.35],8);if(p.pins&&p.photos){Object.entries(p.pins).forEach(([idx,latlng])=>{const ph=p.photos[parseInt(idx)];if(!ph)return;const cap=L18(ph.caption)||'';const icon=L.divIcon({html:`<div style="width:40px;height:40px;border-radius:50%;background:#222;border:3px solid #7aaa50;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.5)"><img src="${ph.src}" style="width:100%;height:100%;object-fit:cover;display:block"></div>`,iconSize:[44,44],iconAnchor:[22,22],popupAnchor:[0,-28],className:''});L.marker([latlng.lat,latlng.lng],{icon}).addTo(vm).bindPopup(`<div class="ppop"><img src="${ph.src}" onclick="olb('${ph.src}','${esc(cap)}')">${cap?`<div class="ppop-cap">${esc(cap)}</div>`:''}<button onclick="olb('${ph.src}','${esc(cap)}')" style="width:100%;padding:5px 8px;background:var(--moss);color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-family:var(--sans);margin-top:6px">🔍 Volledig scherm</button></div>`,{maxWidth:240})})}(p.connections||[]).forEach(c=>drawConnOnMap(vm,c));
     (p.pois||[]).forEach((poi,i)=>{poi._photos=p.photos;addPoiMarkerToMap(vm,poi,i+1,false)});
     // Multiple invalidateSize calls to handle container that starts at height 0
     if(vm){

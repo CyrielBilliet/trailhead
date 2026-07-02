@@ -970,19 +970,24 @@ body:not(.readonly) .logout-btn{display:flex}
 </div>
 <div id="view-vacations" class="view">
   <div class="ph" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem">
-    <div><h2>Vakanties</h2><p>Groepeer je activiteiten per reis of vakantie</p></div>
-    <button class="btn btn-primary edit-only" onclick="showVacationEditor()">+ Nieuwe vakantie</button>
+    <div><h2 data-i18n="vac_title">Vakanties</h2><p data-i18n="vac_subtitle">Groepeer je activiteiten per reis of vakantie</p></div>
+    <button class="btn btn-primary edit-only" onclick="showVacationEditor()">+ <span data-i18n="vac_new">Nieuwe vakantie</span></button>
   </div>
   <div class="vac-grid" id="vac-grid"></div>
-  <div id="vac-empty" style="display:none" class="es"><div class="icon">🏖️</div><h3>Nog geen vakanties</h3><p>Maak een vakantie aan om activiteiten te groeperen.</p></div>
+  <div id="vac-empty" style="display:none" class="es"><div class="icon">🏖️</div><h3 data-i18n="vac_empty_title">Nog geen vakanties</h3><p data-i18n="vac_empty_body">Maak een vakantie aan om activiteiten te groeperen.</p></div>
 </div>
 
 <!-- Vacation editor modal -->
 <div id="vac-editor-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center">
   <div style="background:var(--surface);border-radius:12px;padding:1.5rem;max-width:520px;width:90vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.3)">
     <h2 style="font-family:var(--serif);font-size:22px;color:var(--ink);margin-bottom:1rem" id="vac-editor-title">Nieuwe vakantie</h2>
-    <div class="fg"><label>Titel</label><input type="text" id="vac-title" placeholder="bv. Zomervakantie Alpen 2025"></div>
-    <div class="fg"><label>Beschrijving</label><textarea id="vac-desc" placeholder="Korte beschrijving…" style="min-height:80px"></textarea></div>
+    <div class="edlang-tabs" id="vac-edlang-tabs" style="margin-bottom:.75rem">
+      <button class="edlang-tab" data-vaclang="nl" onclick="switchVacLang('nl')">🇳🇱 NL</button>
+      <button class="edlang-tab" data-vaclang="fr" onclick="switchVacLang('fr')">🇫🇷 FR</button>
+      <button class="edlang-tab" data-vaclang="en" onclick="switchVacLang('en')">🇬🇧 EN</button>
+    </div>
+    <div class="fg"><label data-i18n="ed_title_label">Titel</label><input type="text" id="vac-title" placeholder="bv. Zomervakantie Alpen 2025"></div>
+    <div class="fg"><label data-i18n="vac_desc_label">Beschrijving</label><textarea id="vac-desc" placeholder="Korte beschrijving…" style="min-height:80px"></textarea></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
       <div class="fg"><label>Van</label><input type="date" id="vac-from"></div>
       <div class="fg"><label>Tot</label><input type="date" id="vac-to"></div>
@@ -996,21 +1001,21 @@ body:not(.readonly) .logout-btn{display:flex}
       <img id="vac-photo-preview" style="display:none;width:100%;height:100px;object-fit:cover;border-radius:var(--radius);margin-top:.5rem">
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:1rem">
-      <button class="btn" onclick="closeVacationEditor()">Annuleren</button>
-      <button class="btn btn-primary" onclick="saveVacation()">💾 Opslaan</button>
+      <button class="btn" onclick="closeVacationEditor()" data-i18n="vac_cancel">Annuleren</button>
+      <button class="btn btn-primary" onclick="saveVacation()">💾 <span data-i18n="vac_save">Opslaan</span></button>
     </div>
   </div>
 </div>
 
 <!-- Vacation detail page -->
 <div id="view-vacation-detail" class="view">
-  <button class="bb" onclick="sv('vacations')">← Terug naar vakanties</button>
+  <button class="bb" onclick="sv('vacations')">← <span data-i18n="vac_back">Terug naar vakanties</span></button>
   <div id="vd-hero"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem" id="vd-stats"></div>
   <p class="pbody" id="vd-desc" style="margin-bottom:1.25rem"></p>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
     <div class="sl" style="margin-bottom:0">Activiteiten</div>
-    <button class="btn btn-sm btn-primary edit-only" onclick="togglePostPicker()">+ Activiteit toevoegen</button>
+    <button class="btn btn-sm btn-primary edit-only" onclick="togglePostPicker()">+ <span data-i18n="vac_add_activity">Activiteit toevoegen</span></button>
   </div>
   <div id="vd-post-picker" style="display:none;margin-bottom:1rem">
     <input type="text" id="vd-picker-search" placeholder="Zoek post…" oninput="filterPostPicker(this.value)"
@@ -1264,7 +1269,8 @@ const I18N = {
     login_title:'Inloggen', login_ph:'Wachtwoord…', login_btn:'Inloggen', login_guest:'bekijk als bezoeker',
     photo_url_ph:'Plak een afbeeldings-URL (https://…)', photo_url_add:'Toevoegen',
     photo_add:"Foto's toevoegen", planned_badge:'Gepland',
-    score_difficulty:'Moeilijkheidsgraad', score_landscape:'Landschap', score_recommend:'Aanbeveling'
+    score_difficulty:'Moeilijkheidsgraad', score_landscape:'Landschap', score_recommend:'Aanbeveling',
+    vac_desc_label:'Beschrijving', vac_empty_title:'Nog geen vakanties', vac_empty_body:'Maak je eerste vakantie aan om activiteiten te groeperen.', vac_save:'Vakantie opslaan', vac_cancel:'Annuleren', vac_photo:'Kies een foto', vac_no_activities:'Nog geen activiteiten gekoppeld.'
   },
   fr:{
     nav_posts:'Articles', nav_vacations:'Vacances', nav_newpost:'Nouvel article', nav_login:'Connexion',
@@ -1282,7 +1288,8 @@ const I18N = {
     login_title:'Connexion', login_ph:'Mot de passe…', login_btn:'Se connecter', login_guest:'voir en tant que visiteur',
     photo_url_ph:"Collez une URL d'image (https://…)", photo_url_add:'Ajouter',
     photo_add:'Ajouter des photos', planned_badge:'Prévu',
-    score_difficulty:'Difficulté', score_landscape:'Paysage', score_recommend:'Recommandation'
+    score_difficulty:'Difficulté', score_landscape:'Paysage', score_recommend:'Recommandation',
+    vac_desc_label:'Description', vac_empty_title:'Pas encore de vacances', vac_empty_body:'Créez vos premières vacances pour regrouper vos activités.', vac_save:'Enregistrer', vac_cancel:'Annuler', vac_photo:'Choisir une photo', vac_no_activities:'Aucune activité liée pour le moment.'
   },
   en:{
     nav_posts:'Posts', nav_vacations:'Vacations', nav_newpost:'New post', nav_login:'Log in',
@@ -1300,7 +1307,8 @@ const I18N = {
     login_title:'Log in', login_ph:'Password…', login_btn:'Log in', login_guest:'view as guest',
     photo_url_ph:'Paste an image URL (https://…)', photo_url_add:'Add',
     photo_add:'Add photos', planned_badge:'Planned',
-    score_difficulty:'Difficulty', score_landscape:'Landscape', score_recommend:'Recommendation'
+    score_difficulty:'Difficulty', score_landscape:'Landscape', score_recommend:'Recommendation',
+    vac_desc_label:'Description', vac_empty_title:'No vacations yet', vac_empty_body:'Create your first vacation to group activities.', vac_save:'Save vacation', vac_cancel:'Cancel', vac_photo:'Choose a photo', vac_no_activities:'No activities linked yet.'
   }
 };
 
@@ -1365,6 +1373,12 @@ function setLang(lang){
     const p=posts.find(x=>x.id===currentPostId);
     if(p) vp(currentPostId);
   }
+  // If viewing a vacation detail, re-render it
+  if(typeof currentVacId!=='undefined' && currentVacId && document.getElementById('view-vacation-detail')?.classList.contains('active')){
+    if(typeof openVacation==='function') openVacation(currentVacId);
+  }
+  // If the overview map is showing, redraw popups in the new language
+  if(typeof rom==='function' && document.getElementById('ftp-map')?.classList.contains('active')) rom();
 }
 
 /* Editor multilingual state for title + body */
@@ -1410,8 +1424,41 @@ function loadEditContent(post){
   const tf=document.getElementById('ft'), bf=document.getElementById('fb');
   if(tf) tf.value = editContent.title[editLang] || '';
   if(bf) bf.value = editContent.body[editLang] || '';
-  document.querySelectorAll('.edlang-tab').forEach(b=>{
+  document.querySelectorAll('[data-edlang]').forEach(b=>{
     b.classList.toggle('active', b.getAttribute('data-edlang')===editLang);
+  });
+}
+
+/* Vacation editor multilingual state */
+let vacEditLang = 'nl';
+let vacContent = {title:{nl:'',fr:'',en:''}, desc:{nl:'',fr:'',en:''}};
+
+function captureVacField(){
+  const ti=document.getElementById('vac-title'), de=document.getElementById('vac-desc');
+  if(ti) vacContent.title[vacEditLang] = ti.value;
+  if(de) vacContent.desc[vacEditLang] = de.value;
+}
+
+function switchVacLang(lang){
+  if(!LANGS.includes(lang)) return;
+  captureVacField();
+  vacEditLang = lang;
+  const ti=document.getElementById('vac-title'), de=document.getElementById('vac-desc');
+  if(ti) ti.value = vacContent.title[lang] || '';
+  if(de) de.value = vacContent.desc[lang] || '';
+  document.querySelectorAll('[data-vaclang]').forEach(b=>{
+    b.classList.toggle('active', b.getAttribute('data-vaclang')===lang);
+  });
+}
+
+function loadVacContent(v){
+  vacContent = { title: toMLobj(v?v.title:null), desc: toMLobj(v?v.desc:null) };
+  vacEditLang = currentLang;
+  const ti=document.getElementById('vac-title'), de=document.getElementById('vac-desc');
+  if(ti) ti.value = vacContent.title[vacEditLang] || '';
+  if(de) de.value = vacContent.desc[vacEditLang] || '';
+  document.querySelectorAll('[data-vaclang]').forEach(b=>{
+    b.classList.toggle('active', b.getAttribute('data-vaclang')===vacEditLang);
   });
 }
 
@@ -3671,9 +3718,9 @@ function renderVacations(){
     return`<div class="vac-card" onclick="openVacation('${v.id}')">
       ${v.photo?`<img class="vac-card-banner" src="${v.photo}">`:`<div class="vac-card-banner-placeholder">🏖️</div>`}
       <div class="vac-card-body">
-        <div class="vac-card-title">${esc(v.title||'Vakantie')}</div>
+        <div class="vac-card-title">${esc(L18(v.title)||'Vakantie')}</div>
         ${period?`<div class="vac-card-period">📅 ${period}</div>`:''}
-        ${v.desc?`<div class="vac-card-desc">${esc(v.desc)}</div>`:''}
+        ${L18(v.desc)?`<div class="vac-card-desc">${esc(L18(v.desc))}</div>`:''}
         <div class="vac-card-stats">
           <div class="vac-card-stat">🗺 ${vPosts.length} activiteit${vPosts.length!==1?'en':''}</div>
           ${totalDist>0?`<div class="vac-card-stat">📍 ${totalDist} km</div>`:''}
@@ -3695,11 +3742,11 @@ function openVacation(id){
   // Hero
   const hero=document.getElementById('vd-hero');
   if(v.photo){
-    hero.innerHTML=`<div class="vac-detail-hero"><img src="${v.photo}"><div class="vac-detail-hero-overlay"></div><div class="vac-detail-hero-text"><h1>${esc(v.title||'Vakantie')}</h1>${v.from?`<div class="vp">📅 ${fds(v.from)}${v.to&&v.to!==v.from?' → '+fds(v.to):''}</div>`:''}</div></div>`;
+    hero.innerHTML=`<div class="vac-detail-hero"><img src="${v.photo}"><div class="vac-detail-hero-overlay"></div><div class="vac-detail-hero-text"><h1>${esc(L18(v.title)||'Vakantie')}</h1>${v.from?`<div class="vp">📅 ${fds(v.from)}${v.to&&v.to!==v.from?' → '+fds(v.to):''}</div>`:''}</div></div>`;
   } else {
-    hero.innerHTML=`<h1 style="font-family:var(--serif);font-size:28px;color:var(--ink);margin-bottom:.5rem">${esc(v.title||'Vakantie')}</h1>${v.from?`<p style="color:var(--muted);font-size:13px;margin-bottom:1rem">📅 ${fds(v.from)}${v.to&&v.to!==v.from?' → '+fds(v.to):''}`:'' }`;
+    hero.innerHTML=`<h1 style="font-family:var(--serif);font-size:28px;color:var(--ink);margin-bottom:.5rem">${esc(L18(v.title)||'Vakantie')}</h1>${v.from?`<p style="color:var(--muted);font-size:13px;margin-bottom:1rem">📅 ${fds(v.from)}${v.to&&v.to!==v.from?' → '+fds(v.to):''}`:'' }`;
   }
-  document.getElementById('vd-desc').textContent=v.desc||'';
+  document.getElementById('vd-desc').textContent=L18(v.desc)||'';
   renderVacPostList(v);
   sv('vacation-detail');
 }
@@ -3708,7 +3755,7 @@ function renderVacPostList(v){
   const list=document.getElementById('vd-post-list');
   if(!list) return;
   const vPosts=(v.postIds||[]).map(id=>posts.find(p=>p.id===id)).filter(Boolean);
-  if(!vPosts.length){list.innerHTML='<p style="font-size:13px;color:var(--muted);font-style:italic;font-family:var(--sans);padding:.5rem 0">Nog geen activiteiten gekoppeld.</p>';return}
+  if(!vPosts.length){list.innerHTML='<p style="font-size:13px;color:var(--muted);font-style:italic;font-family:var(--sans);padding:.5rem 0">'+t('vac_no_activities')+'</p>';return}
   list.innerHTML=vPosts.map(p=>{
     const dist=(p.tracks||[]).reduce((s,t)=>s+parseFloat(t.stats?.dist||0),0).toFixed(1);
     const bi=Math.min(p.bannerIndex||0,(p.photos||[]).length-1);
@@ -3840,12 +3887,12 @@ function showVacationEditor(id){
     const v=vacations.find(x=>x.id===id);
     if(!v) return;
     title.textContent='Vakantie bewerken';
-    ti.value=v.title||'';de.value=v.desc||'';fr.value=v.from||'';to.value=v.to||'';
+    loadVacContent(v);fr.value=v.from||'';to.value=v.to||'';
     if(v.photo){vacPhotoData=v.photo;prev.src=v.photo;prev.style.display='block';lbl.innerHTML='📷 <strong>Foto wijzigen</strong>'}
     else{prev.style.display='none';lbl.innerHTML='📷 <strong>Kies een foto</strong>'}
   } else {
     title.textContent='Nieuwe vakantie';
-    ti.value='';de.value='';fr.value='';to.value='';
+    loadVacContent(null);fr.value='';to.value='';
     prev.style.display='none';lbl.innerHTML='📷 <strong>Kies een foto</strong>';
   }
   document.getElementById('vac-editor-overlay').style.display='flex';
@@ -3868,12 +3915,15 @@ function loadVacPhoto(input){
 }
 
 async function saveVacation(){
-  const title=document.getElementById('vac-title').value.trim();
+  captureVacField();
+  const titleML={nl:(vacContent.title.nl||'').trim(), fr:(vacContent.title.fr||'').trim(), en:(vacContent.title.en||'').trim()};
+  const descML={nl:(vacContent.desc.nl||'').trim(), fr:(vacContent.desc.fr||'').trim(), en:(vacContent.desc.en||'').trim()};
+  const title = titleML.nl || titleML.fr || titleML.en;
   if(!title){toast('Voer een titel in');return}
   const v={
     id:editingVacId||Date.now().toString(),
-    title,
-    desc:document.getElementById('vac-desc').value.trim(),
+    title:titleML,
+    desc:descML,
     from:document.getElementById('vac-from').value,
     to:document.getElementById('vac-to').value,
     photo:vacPhotoData||null,

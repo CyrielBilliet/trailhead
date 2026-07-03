@@ -859,6 +859,8 @@ body.readonly .login-btn{display:flex}
 body:not(.readonly) .login-btn{display:none}
 /* Logout button only when logged in */
 .logout-btn{display:none}
+/* Active nav button */
+.nav-desktop .btn-ghost.nav-active{background:var(--surface2);color:var(--ink);font-weight:600}
 body:not(.readonly) .logout-btn{display:flex}
 
 /* ELEVATION TOOLTIP */
@@ -895,6 +897,83 @@ body:not(.readonly) .logout-btn{display:flex}
 .edlang-tab{padding:4px 12px;border:1.5px solid var(--border);background:transparent;border-radius:20px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;font-family:var(--sans);transition:all .15s}
 .edlang-tab:hover{border-color:var(--moss)}
 .edlang-tab.active{background:var(--moss);color:#fff;border-color:var(--moss)}
+
+
+/* ═══ GPX ROUTE CREATOR (geïntegreerd) ═══ */
+#gcx-overlay{display:none;position:fixed;inset:0;z-index:6000;background:var(--bg);flex-direction:column;
+  --gxink:#1a2129;--gxpaper:#fbfbf9;--gxmuted:#5c6670;--gxline:#e2e4df;--gxroute:#c2255c;
+  --gxstart:#2b8a3e;--gxend:#c92a2a;--gxchip:#f1f2ee;
+  --gxmono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--gxsans:var(--sans)}
+#gcx-overlay.open{display:flex}
+#gcx-header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap}
+#gcx-header .gcx-htitle{font-family:var(--serif);font-size:18px;color:var(--ink);font-weight:700}
+#gcx-body{flex:1;position:relative;min-height:0}
+#gcx-map{position:absolute;inset:0;z-index:1}
+#gcx-map.leaflet-container{cursor:crosshair;font-family:var(--gxsans)}
+#gcx-map.leaflet-container:active{cursor:grabbing}
+.gcx-panel{position:absolute;top:12px;left:12px;z-index:1000;width:min(336px,calc(100vw - 24px));max-height:calc(100% - 24px);overflow:auto;background:var(--gxpaper);border:1px solid var(--gxink);box-shadow:4px 4px 0 rgba(26,33,41,.12);color:var(--gxink)}
+.gcx-p-head{display:flex;align-items:flex-start;justify-content:space-between;padding:12px 14px 10px;border-bottom:2px solid var(--gxink)}
+.gcx-p-eyebrow{font:500 10px/1.4 var(--gxmono);letter-spacing:.14em;text-transform:uppercase;color:var(--gxmuted)}
+.gcx-p-title{font:700 19px/1.15 var(--gxsans);letter-spacing:-.01em;margin-top:2px;color:var(--gxink)}
+.gcx-collapse{background:none;border:1px solid var(--gxline);width:26px;height:26px;flex:none;font:500 14px var(--gxmono);color:var(--gxmuted);cursor:pointer;line-height:1}
+.gcx-collapse:hover{border-color:var(--gxink);color:var(--gxink)}
+.gcx-p-body>section{border-bottom:1px solid var(--gxline);padding:12px 14px}
+.gcx-lbl{display:block;font:500 10px/1.4 var(--gxmono);letter-spacing:.14em;text-transform:uppercase;color:var(--gxmuted);margin-bottom:5px}
+.gcx-name-input{width:100%;border:1px solid var(--gxline);background:#fff;color:var(--gxink);font:500 14px var(--gxsans);padding:7px 9px;border-radius:0}
+.gcx-name-input:focus{outline:2px solid var(--gxroute);outline-offset:-1px;border-color:var(--gxroute)}
+.gcx-stats{display:grid;grid-template-columns:1fr 1.6fr}
+.gcx-stats .gcx-cell{padding:12px 14px}
+.gcx-stats .gcx-cell+.gcx-cell{border-left:1px solid var(--gxline)}
+.gcx-stat-val{font:500 17px/1.2 var(--gxmono);margin-top:2px;font-variant-numeric:tabular-nums;color:var(--gxink)}
+.gcx-btnrow{display:flex;gap:8px;flex-wrap:wrap}
+.gcx-btn{font:600 12.5px var(--gxsans);letter-spacing:.01em;border:1px solid var(--gxink);background:#fff;color:var(--gxink);padding:8px 12px;cursor:pointer;flex:1;min-width:0;white-space:nowrap;border-radius:0}
+.gcx-btn:hover:not(:disabled){background:var(--gxchip)}
+.gcx-btn:disabled{border-color:var(--gxline);color:#b3b8b0;cursor:not-allowed;background:#fff}
+.gcx-btn:focus-visible{outline:2px solid var(--gxroute);outline-offset:2px}
+.gcx-btn.primary{background:var(--gxink);color:var(--gxpaper)}
+.gcx-btn.primary:hover:not(:disabled){background:#2c3540}
+.gcx-btn.primary:disabled{background:#c9ccc6;border-color:#c9ccc6;color:#fff}
+.gcx-btn.armed{border-color:var(--gxend);color:var(--gxend);background:#fff5f5}
+.gcx-seg{display:flex;border:1px solid var(--gxline);width:100%}
+.gcx-seg label{flex:1;position:relative;margin:0}
+.gcx-seg input{position:absolute;opacity:0;pointer-events:none}
+.gcx-seg span{display:block;text-align:center;font:500 11px var(--gxmono);letter-spacing:.06em;text-transform:uppercase;padding:7px 4px;cursor:pointer;color:var(--gxmuted)}
+.gcx-seg label+label span{border-left:1px solid var(--gxline)}
+.gcx-seg input:checked+span{background:var(--gxink);color:var(--gxpaper)}
+.gcx-seg input:focus-visible+span{outline:2px solid var(--gxroute);outline-offset:-2px}
+.gcx-tips{font:400 11.5px/1.65 var(--gxsans);color:var(--gxmuted);margin:0}
+.gcx-tips b{color:var(--gxink);font-weight:600}
+.gcx-status{font:500 11px var(--gxmono);color:var(--gxroute);margin-top:7px}
+.gcx-p-foot{display:flex;justify-content:space-between;gap:10px;align-items:baseline;padding:8px 14px;font:400 10.5px var(--gxmono);color:var(--gxmuted)}
+#gcx-coordRead{font-variant-numeric:tabular-nums}
+.gcx-preview{padding:12px 14px;border-bottom:1px solid var(--gxline)}
+.gcx-preview textarea{width:100%;height:170px;resize:vertical;border:1px solid var(--gxline);font:400 10.5px/1.5 var(--gxmono);color:var(--gxink);background:#fff;padding:8px}
+.gcx-preview textarea:focus{outline:2px solid var(--gxroute);outline-offset:-1px}
+.gcx-preview .gcx-btnrow{margin-top:8px}
+.gcx-panel.collapsed .gcx-p-body,.gcx-panel.collapsed .gcx-p-foot{display:none}
+.gcx-pt{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:600 11px var(--gxmono);background:#fff;border:2.5px solid var(--gxroute);color:var(--gxink);box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.gcx-pt.start{background:var(--gxstart);border-color:#fff;color:#fff}
+.gcx-pt.end{background:var(--gxend);border-color:#fff;color:#fff}
+.gcx-pt.sel{box-shadow:0 0 0 4px rgba(194,37,92,.38),0 1px 4px rgba(0,0,0,.4)}
+#gcx-overlay .leaflet-popup-content-wrapper{border-radius:2px;border:1px solid var(--gxink);box-shadow:3px 3px 0 rgba(26,33,41,.12)}
+#gcx-overlay .leaflet-popup-content{margin:10px 12px;font-family:var(--gxsans)}
+.gcx-pp-title{font:600 13px var(--gxsans);margin-bottom:3px}
+.gcx-pp-meta{font:400 11px/1.6 var(--gxmono);color:var(--gxmuted)}
+.gcx-pp-del{margin-top:8px;width:100%;font:600 11.5px var(--gxsans);color:var(--gxend);background:#fff;border:1px solid var(--gxend);padding:6px 8px;cursor:pointer}
+.gcx-pp-del:hover{background:#fff5f5}
+.gcx-chip,.gcx-toast,.gcx-selbar{position:absolute;left:50%;transform:translateX(-50%);z-index:1100;background:var(--gxpaper);border:1px solid var(--gxink);font:500 12px/1.5 var(--gxmono);padding:8px 14px;text-align:center;box-shadow:3px 3px 0 rgba(26,33,41,.12);max-width:min(460px,calc(100vw - 24px));color:var(--gxink)}
+.gcx-chip{bottom:26px;pointer-events:none;white-space:nowrap}
+.gcx-chip.hidden{display:none}
+.gcx-toast{top:14px;opacity:0;pointer-events:none;transition:opacity .25s}
+.gcx-toast.show{opacity:1}
+.gcx-selbar{bottom:26px;border-color:var(--gxroute);display:flex;align-items:center;gap:10px;padding:7px 10px 7px 14px}
+.gcx-selbar[hidden]{display:none}
+.gcx-selbar button{background:none;border:1px solid var(--gxroute);color:var(--gxroute);width:22px;height:22px;flex:none;font:500 13px/1 var(--gxmono);cursor:pointer}
+.gcx-selbar button:hover{background:#fdf0f5}
+#gcx-overlay .leaflet-control-layers,#gcx-overlay .leaflet-bar{border-radius:2px!important}
+#gcx-overlay .leaflet-control-layers{font:400 12px var(--gxsans)}
+@media(max-width:600px){#gcx-header{padding:8px 10px}.gcx-panel{width:min(300px,calc(100vw - 20px))}}
+
 </style>
 </head>
 <body class="readonly">
@@ -902,11 +981,11 @@ body:not(.readonly) .logout-btn{display:flex}
 <!-- Print content (hidden except during print) -->
 <div id="print-content" style="display:none"></div>
 <nav>
-  <div class="logo"><div class="logo-icon"><div class="logo-inner">▲</div></div>Trail<span>head</span></div>
+  <div class="logo" onclick="sv('feed')" style="cursor:pointer" title="Terug naar home"><div class="logo-icon"><div class="logo-inner">▲</div></div>Trail<span>head</span></div>
   <!-- Desktop nav -->
   <div class="nav-desktop" style="display:flex;gap:8px;align-items:center">
-    <button class="btn btn-ghost" onclick="sv('feed')">📋 <span data-i18n="nav_posts">Posts</span></button>
-    <button class="btn btn-ghost" onclick="sv('vacations')">🏖 <span data-i18n="nav_vacations">Vakanties</span></button>
+    <button class="btn btn-ghost" data-nav="feed" onclick="sv('feed')">📋 <span data-i18n="nav_posts">Posts</span></button>
+    <button class="btn btn-ghost" data-nav="vacations" onclick="sv('vacations')">🏖 <span data-i18n="nav_vacations">Vakanties</span></button>
     <button class="btn btn-primary edit-only" onclick="showEd()">+ <span data-i18n="nav_newpost">Nieuwe post</span></button>
     <button class="btn btn-ghost login-btn" onclick="showLogin()">🔒 <span data-i18n="nav_login">Inloggen</span></button>
     <button class="btn btn-ghost logout-btn edit-only" onclick="syncAllToSupabase()" title="Synchroniseer met cloud">☁</button>
@@ -931,8 +1010,8 @@ body:not(.readonly) .logout-btn{display:flex}
 </nav>
 <!-- Mobile drawer -->
 <div class="nav-drawer" id="nav-drawer">
-  <button class="btn" onclick="sv('feed');closeDrawer()"><span data-i18n="nav_posts">Posts</span></button>
-  <button class="btn" onclick="sv('vacations');closeDrawer()"><span data-i18n="nav_vacations">Vakanties</span></button>
+  <button class="btn" data-nav="feed" onclick="sv('feed');closeDrawer()"><span data-i18n="nav_posts">Posts</span></button>
+  <button class="btn" data-nav="vacations" onclick="sv('vacations');closeDrawer()"><span data-i18n="nav_vacations">Vakanties</span></button>
   <button class="btn btn-primary edit-only" onclick="showEd();closeDrawer()"><span data-i18n="nav_newpost">Nieuwe post</span></button>
   <div class="lang-switch" style="margin:6px 0;justify-content:center">
     <button class="lang-btn" data-lang="nl" onclick="setLang('nl')">NL</button>
@@ -1092,6 +1171,7 @@ body:not(.readonly) .logout-btn{display:flex}
       <input type="file" id="fg2" accept=".gpx" multiple onchange="lgf(this.files)">
       <div class="uzl">🗺 <strong>Kies GPX bestanden</strong> — meerdere ok</div>
     </div>
+    <div style="margin-top:8px"><button class="btn btn-sm" type="button" onclick="openGpxCreator()">✏️ <span data-i18n="gcx_open">Route tekenen op kaart</span></button></div>
     <div class="tl" id="tl2"></div>
   </div>
   <div class="fg">
@@ -1139,7 +1219,7 @@ body:not(.readonly) .logout-btn{display:flex}
 <div id="view-post" class="view">
   <!-- Top bar: back + pdf -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.5rem">
-    <button class="bb" style="margin-bottom:0" onclick="sv('feed')">← Terug naar overzicht</button>
+    <button class="bb" style="margin-bottom:0" onclick="sv('feed')">← <span data-i18n="nav_back_feed">Terug naar overzicht</span></button>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <span id="pv-execute-btn"></span>
       <button class="btn btn-sm" onclick="printPost(currentPostId)" style="gap:5px">🖨 Opslaan als PDF</button>
@@ -1157,7 +1237,7 @@ body:not(.readonly) .logout-btn{display:flex}
     <div class="post-wide-main">
       <!-- Tabs -->
       <div class="ptabs">
-        <button class="ptab active" onclick="spt('story')">📖 Verhaal</button>
+        <button class="ptab active" onclick="spt('story')">📖 <span data-i18n="tab_story">Verhaal</span></button>
         <button class="ptab" id="tib" onclick="spt('info')">📋 Info</button>
       </div>
 
@@ -1254,8 +1334,8 @@ const LANG_FLAGS = {nl:'🇳🇱', fr:'🇫🇷', en:'🇬🇧'};
 
 const I18N = {
   nl:{
-    nav_posts:'Posts', nav_vacations:'Vakanties', nav_newpost:'Nieuwe post', nav_login:'Inloggen',
-    tab_posts:'Posts', tab_planned:'Geplande activiteiten', tab_map:'Kaart',
+    nav_posts:'Posts', nav_vacations:'Vakanties', nav_newpost:'Nieuwe post', nav_login:'Inloggen', nav_back_feed:'Terug naar overzicht',
+    tab_posts:'Posts', tab_planned:'Geplande activiteiten', tab_map:'Kaart', tab_story:'Verhaal',
     ed_title_label:'Titel', ed_title_ph:'Geef je avontuur een naam…',
     ed_story_label:'Verhaal', ed_story_ph:'Schrijf over je avontuur…',
     ed_category:'Categorie', ed_groups:'Groups', ed_photos:"Foto's", ed_participants:'Deelnemers',
@@ -1270,11 +1350,12 @@ const I18N = {
     photo_url_ph:'Plak een afbeeldings-URL (https://…)', photo_url_add:'Toevoegen',
     photo_add:"Foto's toevoegen", planned_badge:'Gepland',
     score_difficulty:'Moeilijkheidsgraad', score_landscape:'Landschap', score_recommend:'Aanbeveling',
-    vac_desc_label:'Beschrijving', vac_empty_title:'Nog geen vakanties', vac_empty_body:'Maak je eerste vakantie aan om activiteiten te groeperen.', vac_save:'Vakantie opslaan', vac_cancel:'Annuleren', vac_photo:'Kies een foto', vac_no_activities:'Nog geen activiteiten gekoppeld.'
+    vac_desc_label:'Beschrijving', vac_empty_title:'Nog geen vakanties', vac_empty_body:'Maak je eerste vakantie aan om activiteiten te groeperen.', vac_save:'Vakantie opslaan', vac_cancel:'Annuleren', vac_photo:'Kies een foto', vac_no_activities:'Nog geen activiteiten gekoppeld.',
+    gcx_open:'Route tekenen op kaart', gcx_title:'Route tekenen', gcx_use:'Gebruik in post', gcx_close:'Sluiten', gcx_name:'Routenaam', gcx_mode:'Tekenmodus', gcx_free:'Vrije lijn', gcx_road:'Volg wegen', gcx_bike:'Fiets', gcx_foot:'Te voet', gcx_car:'Auto', gcx_apply:'Pas toe op hele route', gcx_pts:'Punten', gcx_dist:'Afstand', gcx_undo:'Ongedaan', gcx_export:'Exporteren als', gcx_download:'Download GPX', gcx_import:'GPX importeren…', gcx_copy:'Kopieer naar klembord', gcx_help:'Bediening', gcx_chip:'Klik op de kaart om je eerste punt te plaatsen', gcx_tips:'Klik op de kaart om een punt te plaatsen. Sleep een punt om het te verplaatsen. Klik op de lijn om een segment te selecteren; klik daarna waar de route moet passeren. Klik op een punt om het te verwijderen. Rechtsklik of Ctrl+Z maakt het laatste punt ongedaan. Gestippeld = vrije lijn, vol = volgt de weg.'
   },
   fr:{
-    nav_posts:'Articles', nav_vacations:'Vacances', nav_newpost:'Nouvel article', nav_login:'Connexion',
-    tab_posts:'Articles', tab_planned:'Activités prévues', tab_map:'Carte',
+    nav_posts:'Articles', nav_vacations:'Vacances', nav_newpost:'Nouvel article', nav_login:'Connexion', nav_back_feed:'Retour à l\'accueil',
+    tab_posts:'Articles', tab_planned:'Activités prévues', tab_map:'Carte', tab_story:'Récit',
     ed_title_label:'Titre', ed_title_ph:'Donnez un nom à votre aventure…',
     ed_story_label:'Récit', ed_story_ph:'Racontez votre aventure…',
     ed_category:'Catégorie', ed_groups:'Groupes', ed_photos:'Photos', ed_participants:'Participants',
@@ -1289,11 +1370,12 @@ const I18N = {
     photo_url_ph:"Collez une URL d'image (https://…)", photo_url_add:'Ajouter',
     photo_add:'Ajouter des photos', planned_badge:'Prévu',
     score_difficulty:'Difficulté', score_landscape:'Paysage', score_recommend:'Recommandation',
-    vac_desc_label:'Description', vac_empty_title:'Pas encore de vacances', vac_empty_body:'Créez vos premières vacances pour regrouper vos activités.', vac_save:'Enregistrer', vac_cancel:'Annuler', vac_photo:'Choisir une photo', vac_no_activities:'Aucune activité liée pour le moment.'
+    vac_desc_label:'Description', vac_empty_title:'Pas encore de vacances', vac_empty_body:'Créez vos premières vacances pour regrouper vos activités.', vac_save:'Enregistrer', vac_cancel:'Annuler', vac_photo:'Choisir une photo', vac_no_activities:'Aucune activité liée pour le moment.',
+    gcx_open:'Tracer un itinéraire sur la carte', gcx_title:'Tracer un itinéraire', gcx_use:'Utiliser dans l\'article', gcx_close:'Fermer', gcx_name:'Nom de l\'itinéraire', gcx_mode:'Mode de tracé', gcx_free:'Ligne libre', gcx_road:'Suivre les routes', gcx_bike:'Vélo', gcx_foot:'À pied', gcx_car:'Voiture', gcx_apply:'Appliquer à tout l\'itinéraire', gcx_pts:'Points', gcx_dist:'Distance', gcx_undo:'Annuler', gcx_export:'Exporter comme', gcx_download:'Télécharger GPX', gcx_import:'Importer GPX…', gcx_copy:'Copier dans le presse-papiers', gcx_help:'Commandes', gcx_chip:'Cliquez sur la carte pour placer votre premier point', gcx_tips:'Cliquez sur la carte pour placer un point. Faites glisser un point pour le déplacer. Cliquez sur la ligne pour sélectionner un segment ; cliquez ensuite là où l\'itinéraire doit passer. Cliquez sur un point pour le supprimer. Clic droit ou Ctrl+Z annule le dernier point. Pointillé = ligne libre, plein = suit la route.'
   },
   en:{
-    nav_posts:'Posts', nav_vacations:'Vacations', nav_newpost:'New post', nav_login:'Log in',
-    tab_posts:'Posts', tab_planned:'Planned activities', tab_map:'Map',
+    nav_posts:'Posts', nav_vacations:'Vacations', nav_newpost:'New post', nav_login:'Log in', nav_back_feed:'Back to overview',
+    tab_posts:'Posts', tab_planned:'Planned activities', tab_map:'Map', tab_story:'Story',
     ed_title_label:'Title', ed_title_ph:'Give your adventure a name…',
     ed_story_label:'Story', ed_story_ph:'Write about your adventure…',
     ed_category:'Category', ed_groups:'Groups', ed_photos:'Photos', ed_participants:'Participants',
@@ -1308,7 +1390,8 @@ const I18N = {
     photo_url_ph:'Paste an image URL (https://…)', photo_url_add:'Add',
     photo_add:'Add photos', planned_badge:'Planned',
     score_difficulty:'Difficulty', score_landscape:'Landscape', score_recommend:'Recommendation',
-    vac_desc_label:'Description', vac_empty_title:'No vacations yet', vac_empty_body:'Create your first vacation to group activities.', vac_save:'Save vacation', vac_cancel:'Cancel', vac_photo:'Choose a photo', vac_no_activities:'No activities linked yet.'
+    vac_desc_label:'Description', vac_empty_title:'No vacations yet', vac_empty_body:'Create your first vacation to group activities.', vac_save:'Save vacation', vac_cancel:'Cancel', vac_photo:'Choose a photo', vac_no_activities:'No activities linked yet.',
+    gcx_open:'Draw a route on the map', gcx_title:'Draw route', gcx_use:'Use in post', gcx_close:'Close', gcx_name:'Route name', gcx_mode:'Drawing mode', gcx_free:'Free line', gcx_road:'Follow roads', gcx_bike:'Bike', gcx_foot:'On foot', gcx_car:'Car', gcx_apply:'Apply to whole route', gcx_pts:'Points', gcx_dist:'Distance', gcx_undo:'Undo', gcx_export:'Export as', gcx_download:'Download GPX', gcx_import:'Import GPX…', gcx_copy:'Copy to clipboard', gcx_help:'Controls', gcx_chip:'Click on the map to place your first point', gcx_tips:'Click on the map to place a point. Drag a point to move it. Click on the line to select a segment, then click where the route should pass. Click a point to delete it. Right-click or Ctrl+Z undoes the last point. Dashed = free line, solid = follows the road.'
   }
 };
 
@@ -2785,7 +2868,624 @@ function setFsLayer(idx){
   document.querySelectorAll('.fs-layer-btn').forEach((b,i)=>b.classList.toggle('active',i===idx));
 }
 
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeFullscreenMap()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('map-fs-overlay')?.classList.contains('open'))closeFullscreenMap()});
+
+
+/* ═══ GPX ROUTE CREATOR (geïntegreerd) ═══ */
+let gcxInited=false, gcxApi=null;
+
+function openGpxCreator(){
+  const ov=document.getElementById('gcx-overlay');
+  ov.classList.add('open');
+  document.body.style.overflow='hidden';
+  if(typeof L==='undefined'){setTimeout(openGpxCreator,200);return;}
+  if(!gcxInited){
+    gcxInited=true;
+    setTimeout(initGpxCreator,120);
+  } else {
+    setTimeout(()=>{if(gcxApi)gcxApi.invalidate();},120);
+  }
+}
+
+function closeGpxCreator(){
+  document.getElementById('gcx-overlay').classList.remove('open');
+  document.body.style.overflow='';
+}
+
+function gcxUseInPost(){
+  if(!gcxApi){toast('Teken eerst een route');return;}
+  const g=gcxApi.fullGeom();
+  if(g.length<2){toast('Teken eerst een route (minstens 2 punten)');return;}
+  const name=(gcxApi.getName()||'').trim()||('Route '+(ctr.length+1));
+  const lats=g.map(p=>p.lat), lngs=g.map(p=>p.lng);
+  const dist=(gcxApi.totalDist()/1000).toFixed(1);
+  const track={id:Date.now().toString(),name,color:TC[ctr.length%TC.length],
+    stats:{dist,elevGain:0,elevLoss:0,points:g.length,lats,lngs,elevs:[]}};
+  ctr.push(track);
+  rtl();
+  mbpe();
+  closeGpxCreator();
+  toast('✓ Route "'+name+'" toegevoegd als track ('+dist+' km)');
+}
+
+function initGpxCreator(){
+  if(typeof L==='undefined') return;
+
+  /* ── kaart ── */
+  var map=L.map('gcx-map',{zoomControl:false,doubleClickZoom:false}).setView([50.80,3.09],13);
+  L.control.zoom({position:'bottomright'}).addTo(map);
+  L.control.scale({metric:true,imperial:false,position:'bottomleft'}).addTo(map);
+
+  var osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap-bijdragers'});
+  var topo=L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:17,attribution:'&copy; OpenStreetMap, SRTM &#183; &copy; OpenTopoMap (CC-BY-SA)'});
+  var sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Beeldmateriaal &copy; Esri'});
+  osm.addTo(map);
+  L.control.layers({'Kaart':osm,'Topografisch':topo,'Satelliet':sat},null,{position:'topright'}).addTo(map);
+
+  /* ── routeringsdienst (OSRM, FOSSGIS/OpenStreetMap.de) ── */
+  var OSRM={
+    bike:'https://routing.openstreetmap.de/routed-bike',
+    foot:'https://routing.openstreetmap.de/routed-foot',
+    car:'https://routing.openstreetmap.de/routed-car'
+  };
+
+  var waypoints=[];
+  var markers=[];
+  var legs=[];
+  var selectedLeg=null;
+
+  var casing=L.polyline([],{color:'#ffffff',weight:8,opacity:.85,interactive:false}).addTo(map);
+  var selHalo=L.polyline([],{color:'#c2255c',weight:15,opacity:.28,interactive:false}).addTo(map);
+  var freeLine=L.polyline([],{color:'#c2255c',weight:4,opacity:.95,dashArray:'6,8'}).addTo(map);
+  var roadLine=L.polyline([],{color:'#c2255c',weight:4,opacity:.95}).addTo(map);
+
+  var $g=function(id){return document.getElementById(id)};
+  var statPts=$g('gcx-statPts'),statDist=$g('gcx-statDist'),
+      btnUndo=$g('gcx-btnUndo'),btnClear=$g('gcx-btnClear'),btnApply=$g('gcx-btnApply'),
+      btnDownload=$g('gcx-btnDownload'),btnPreview=$g('gcx-btnPreview'),
+      previewWrap=$g('gcx-previewWrap'),gpxText=$g('gcx-gpxText'),btnCopy=$g('gcx-btnCopy'),
+      btnImport=$g('gcx-btnImport'),fileInput=$g('gcx-fileInput'),
+      nameInput=$g('gcx-routeName'),coordRead=$g('gcx-coordRead'),
+      emptyChip=$g('gcx-emptyChip'),toastEl=$g('gcx-toast'),
+      panel=$g('gcx-panel'),collapseBtn=$g('gcx-collapseBtn'),
+      profileRow=$g('gcx-profileRow'),routeStatus=$g('gcx-routeStatus'),
+      selBar=$g('gcx-selBar'),selText=$g('gcx-selText'),selCancel=$g('gcx-selCancel');
+
+  function curMode(){
+    var r=document.querySelector('input[name="gcx-drawmode"]:checked');
+    return r?r.value:'free';
+  }
+  function curProfile(){
+    var r=document.querySelector('input[name="gcx-profile"]:checked');
+    return r?r.value:'bike';
+  }
+
+  function fmtDist(m){
+    if(m<1000) return Math.round(m)+' m';
+    return (m/1000).toFixed(2).replace('.',',')+' km';
+  }
+  function totalDist(){
+    var d=0;
+    for(var i=0;i<legs.length;i++) d+=legs[i].dist;
+    return d;
+  }
+  function cumDist(idx){
+    var d=0;
+    for(var i=0;i<idx;i++) d+=legs[i].dist;
+    return d;
+  }
+  function gescape(s){
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+  }
+  var toastTimer;
+  function gtoast(msg,ms){
+    toastEl.textContent=msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer=setTimeout(function(){toastEl.classList.remove('show')},ms||2400);
+  }
+
+  /* ── routering ── */
+  function fetchRoute(a,b,profile){
+    var base=OSRM[profile]||OSRM.bike;
+    var url=base+'/route/v1/driving/'
+      +a.lng.toFixed(6)+','+a.lat.toFixed(6)+';'
+      +b.lng.toFixed(6)+','+b.lat.toFixed(6)
+      +'?overview=full&geometries=geojson&alternatives=false&steps=false';
+    var ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
+    var timer=ctrl?setTimeout(function(){ctrl.abort()},9000):null;
+    return fetch(url,ctrl?{signal:ctrl.signal}:{})
+      .then(function(r){
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        return r.json();
+      })
+      .then(function(j){
+        if(timer) clearTimeout(timer);
+        if(!j.routes||!j.routes[0]||!j.routes[0].geometry) throw new Error('geen route');
+        var g=j.routes[0].geometry.coordinates.map(function(c){return L.latLng(c[1],c[0])});
+        if(g.length<2) throw new Error('geen route');
+        var dist=j.routes[0].distance||0;
+        if(a.distanceTo(g[0])>1){dist+=a.distanceTo(g[0]);g.unshift(a);}
+        if(b.distanceTo(g[g.length-1])>1){dist+=b.distanceTo(g[g.length-1]);g.push(b);}
+        return {geom:g,dist:dist};
+      })
+      .catch(function(err){
+        if(timer) clearTimeout(timer);
+        throw err;
+      });
+  }
+
+  var lastFail=0;
+  function routingFailed(){
+    var now=Date.now();
+    if(now-lastFail>4000){
+      gtoast('Routeserver niet bereikbaar \u2014 rechte lijn gebruikt',4200);
+      lastFail=now;
+    }
+  }
+
+  /* ── segmenten ── */
+  function blankLeg(){
+    return {mode:'free',profile:null,geom:[],dist:0,pending:false,gen:0};
+  }
+
+  function computeLeg(i,mode,profile){
+    var leg=legs[i];
+    if(!leg) return;
+    var a=waypoints[i],b=waypoints[i+1];
+    leg.gen++;
+    var gen=leg.gen;
+    leg.profile=profile||null;
+    if(mode!=='road'){
+      leg.mode='free';leg.pending=false;
+      leg.geom=[a,b];leg.dist=a.distanceTo(b);
+      refresh();
+      return;
+    }
+    leg.mode='road';leg.pending=true;
+    leg.geom=[a,b];leg.dist=a.distanceTo(b);
+    refresh();
+    fetchRoute(a,b,profile||'bike').then(function(res){
+      if(leg.gen!==gen||legs.indexOf(leg)===-1) return;
+      leg.geom=res.geom;leg.dist=res.dist;leg.pending=false;
+      refresh();
+    }).catch(function(){
+      if(leg.gen!==gen||legs.indexOf(leg)===-1) return;
+      var ii=legs.indexOf(leg);
+      leg.mode='free';leg.pending=false;
+      leg.geom=[waypoints[ii],waypoints[ii+1]];
+      leg.dist=waypoints[ii].distanceTo(waypoints[ii+1]);
+      refresh();
+      routingFailed();
+    });
+  }
+
+  function fullGeom(){
+    var g=[];
+    for(var i=0;i<legs.length;i++){
+      var arr=legs[i].geom;
+      for(var k=0;k<arr.length;k++){
+        if(g.length&&k===0) continue;
+        g.push(arr[k]);
+      }
+    }
+    return g;
+  }
+
+  function redrawLines(){
+    var solid=[],dashed=[];
+    for(var i=0;i<legs.length;i++){
+      var l=legs[i];
+      if(l.mode==='road'&&!l.pending) solid.push(l.geom);
+      else dashed.push(l.geom);
+    }
+    roadLine.setLatLngs(solid);
+    freeLine.setLatLngs(dashed);
+    casing.setLatLngs(fullGeom());
+    selHalo.setLatLngs((selectedLeg&&legs.indexOf(selectedLeg)!==-1)?selectedLeg.geom:[]);
+  }
+
+  function selectLeg(leg){
+    selectedLeg=leg;
+    refresh();
+  }
+  function clearSelection(){
+    if(!selectedLeg) return;
+    selectedLeg=null;
+    refresh();
+  }
+
+  /* ── markers ── */
+  function makeIcon(i,total,sel){
+    var cls='gcx-pt';
+    if(i===0) cls+=' start';
+    else if(i===total-1) cls+=' end';
+    if(sel) cls+=' sel';
+    return L.divIcon({className:'',html:'<div class="'+cls+'">'+(i+1)+'</div>',iconSize:[26,26],iconAnchor:[13,13]});
+  }
+
+  function popupContent(m){
+    var i=m._idx;
+    var wrap=document.createElement('div');
+    wrap.innerHTML='<div class="gcx-pp-title">Punt '+(i+1)+' van '+waypoints.length+'</div>'
+      +'<div class="gcx-pp-meta">'+waypoints[i].lat.toFixed(5)+', '+waypoints[i].lng.toFixed(5)+'</div>'
+      +(i>0?'<div class="gcx-pp-meta">Afstand tot hier: '+fmtDist(cumDist(i))+'</div>':'');
+    var del=document.createElement('button');
+    del.className='gcx-pp-del';
+    del.textContent='Punt verwijderen';
+    del.addEventListener('click',function(){
+      map.closePopup();
+      removeWaypoint(m._idx);
+    });
+    wrap.appendChild(del);
+    return wrap;
+  }
+
+  function createMarker(latlng){
+    var m=L.marker(latlng,{draggable:true,icon:makeIcon(0,1,false),keyboard:false});
+    m.on('click',function(e){L.DomEvent.stopPropagation(e.originalEvent)});
+    m.on('drag',function(){
+      var i=markers.indexOf(m);
+      if(i<0) return;
+      waypoints[i]=m.getLatLng();
+      if(legs[i-1]) legs[i-1].geom=[waypoints[i-1],waypoints[i]];
+      if(legs[i])   legs[i].geom=[waypoints[i],waypoints[i+1]];
+      redrawLines();
+    });
+    m.on('dragend',function(){
+      var i=markers.indexOf(m);
+      if(i<0) return;
+      waypoints[i]=m.getLatLng();
+      if(legs[i-1]) computeLeg(i-1,legs[i-1].mode,legs[i-1].profile||curProfile());
+      if(legs[i])   computeLeg(i,legs[i].mode,legs[i].profile||curProfile());
+      refresh();
+    });
+    m.bindPopup(function(){return popupContent(m)},{closeButton:false,offset:[0,-4]});
+    m.addTo(map);
+    return m;
+  }
+
+  /* ── mutaties ── */
+  function addWaypoint(latlng,index){
+    if(index===undefined||index>waypoints.length) index=waypoints.length;
+    var m=createMarker(latlng);
+    waypoints.splice(index,0,latlng);
+    markers.splice(index,0,m);
+    if(waypoints.length>=2){
+      if(index===waypoints.length-1){
+        legs.push(blankLeg());
+        computeLeg(legs.length-1,curMode(),curMode()==='road'?curProfile():null);
+      }else if(index===0){
+        legs.unshift(blankLeg());
+        computeLeg(0,curMode(),curMode()==='road'?curProfile():null);
+      }else{
+        var old=legs[index-1];
+        var mode=old.mode==='road'?'road':'free';
+        var prof=old.profile||curProfile();
+        legs.splice(index-1,1,blankLeg(),blankLeg());
+        computeLeg(index-1,mode,mode==='road'?prof:null);
+        computeLeg(index,mode,mode==='road'?prof:null);
+      }
+    }
+    refresh();
+  }
+
+  function removeWaypoint(i){
+    if(i<0||i>=waypoints.length) return;
+    map.removeLayer(markers[i]);
+    markers.splice(i,1);
+    waypoints.splice(i,1);
+    if(waypoints.length===0){
+      legs=[];
+    }else if(i===0){
+      legs.shift();
+    }else if(i===waypoints.length){
+      legs.pop();
+    }else{
+      var A=legs[i-1],B=legs[i];
+      var mode=(A.mode==='road'||B.mode==='road')?'road':'free';
+      var prof=(A.mode==='road'?A.profile:(B.mode==='road'?B.profile:null))||curProfile();
+      legs.splice(i-1,2,blankLeg());
+      computeLeg(i-1,mode,mode==='road'?prof:null);
+    }
+    refresh();
+  }
+
+  function gcUndo(){
+    if(waypoints.length) removeWaypoint(waypoints.length-1);
+  }
+  function clearAll(){
+    for(var i=0;i<markers.length;i++) map.removeLayer(markers[i]);
+    markers=[];waypoints=[];legs=[];selectedLeg=null;
+    refresh();
+  }
+
+  function refresh(){
+    if(selectedLeg&&legs.indexOf(selectedLeg)===-1) selectedLeg=null;
+    redrawLines();
+    var n=markers.length;
+    var selIdx=selectedLeg?legs.indexOf(selectedLeg):-1;
+    for(var i=0;i<n;i++){
+      markers[i]._idx=i;
+      markers[i].setIcon(makeIcon(i,n,selIdx>=0&&(i===selIdx||i===selIdx+1)));
+    }
+    statPts.textContent=n;
+    statDist.innerHTML=n>1?fmtDist(totalDist()):'&#8212;';
+    btnUndo.disabled=n===0;
+    btnClear.disabled=n===0;
+    btnApply.disabled=n<2;
+    btnDownload.disabled=n<2;
+    btnPreview.disabled=n<2;
+    emptyChip.classList.toggle('hidden',n>0);
+    if(selIdx>=0){
+      selText.textContent='Punt '+(selIdx+1)+' \u2013 '+(selIdx+2)+' geselecteerd \u00b7 klik waar de route moet passeren';
+      selBar.hidden=false;
+    }else{
+      selBar.hidden=true;
+    }
+    var pending=false;
+    for(var k=0;k<legs.length;k++) if(legs[k].pending){pending=true;break;}
+    routeStatus.hidden=!pending;
+    if(n===0) disarmClear();
+    if(!previewWrap.hidden){
+      if(n>=2) gpxText.value=buildGpx();
+      else{previewWrap.hidden=true;btnPreview.textContent='Toon code';}
+    }
+  }
+
+  /* ── kaartinteractie ── */
+  map.on('click',function(e){
+    if(selectedLeg){
+      var li=legs.indexOf(selectedLeg);
+      selectedLeg=null;
+      if(li>=0){addWaypoint(e.latlng,li+1);return;}
+    }
+    addWaypoint(e.latlng);
+  });
+  map.on('contextmenu',function(e){
+    if(e.originalEvent) e.originalEvent.preventDefault();
+    if(selectedLeg){clearSelection();return;}
+    gcUndo();
+  });
+  map.on('mousemove',function(e){
+    coordRead.textContent=e.latlng.lat.toFixed(5)+', '+e.latlng.lng.toFixed(5);
+  });
+  map.on('mouseout',function(){coordRead.innerHTML='&#8212;'});
+
+  function nearestLeg(latlng){
+    var p=map.latLngToLayerPoint(latlng),best=-1,bestD=Infinity;
+    for(var li=0;li<legs.length;li++){
+      var g=legs[li].geom;
+      for(var i=0;i<g.length-1;i++){
+        var d=L.LineUtil.pointToSegmentDistance(p,
+          map.latLngToLayerPoint(g[i]),
+          map.latLngToLayerPoint(g[i+1]));
+        if(d<bestD){bestD=d;best=li;}
+      }
+    }
+    return best;
+  }
+  function onLineClick(e){
+    L.DomEvent.stopPropagation(e.originalEvent);
+    var li=nearestLeg(e.latlng);
+    if(li<0) return;
+    if(selectedLeg===legs[li]){
+      selectedLeg=null;
+      addWaypoint(e.latlng,li+1);
+    }else{
+      selectLeg(legs[li]);
+    }
+  }
+  roadLine.on('click',onLineClick);
+  freeLine.on('click',onLineClick);
+  selCancel.addEventListener('click',clearSelection);
+
+  /* ── knoppen ── */
+  btnUndo.addEventListener('click',gcUndo);
+
+  var clearArmed=false,clearTimer;
+  function disarmClear(){
+    clearArmed=false;
+    btnClear.textContent='Wis alles';
+    btnClear.classList.remove('armed');
+    clearTimeout(clearTimer);
+  }
+  btnClear.addEventListener('click',function(){
+    if(!waypoints.length) return;
+    if(!clearArmed){
+      clearArmed=true;
+      btnClear.textContent='Zeker? Klik nogmaals';
+      btnClear.classList.add('armed');
+      clearTimer=setTimeout(disarmClear,2600);
+      return;
+    }
+    disarmClear();
+    clearAll();
+    gtoast('Route gewist');
+  });
+
+  document.querySelectorAll('input[name="gcx-drawmode"]').forEach(function(r){
+    r.addEventListener('change',function(){
+      profileRow.hidden=curMode()!=='road';
+    });
+  });
+
+  btnApply.addEventListener('click',function(){
+    if(legs.length<1) return;
+    var mode=curMode();
+    if(mode==='road'&&legs.length>30){
+      gtoast('Te veel segmenten om in \u00e9\u00e9n keer via wegen te herberekenen (max. 30)',4200);
+      return;
+    }
+    var prof=mode==='road'?curProfile():null;
+    for(var i=0;i<legs.length;i++) computeLeg(i,mode,prof);
+    gtoast(mode==='road'?'Hele route wordt via wegen herberekend':'Hele route omgezet naar vrije lijnen');
+  });
+
+  document.addEventListener('keydown',function(e){
+    var ov=document.getElementById('gcx-overlay');
+    if(!ov||!ov.classList.contains('open')) return;
+    var tag=(document.activeElement&&document.activeElement.tagName)||'';
+    if(tag==='INPUT'||tag==='TEXTAREA') return;
+    if(e.key==='Escape'){
+      if(selectedLeg){clearSelection();}
+      else{closeGpxCreator();}
+      return;
+    }
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){
+      e.preventDefault();
+      gcUndo();
+    }
+  });
+
+  collapseBtn.addEventListener('click',function(){
+    var c=panel.classList.toggle('collapsed');
+    collapseBtn.innerHTML=c?'+':'&#8722;';
+  });
+
+  /* ── GPX export ── */
+  function expType(){
+    var r=document.querySelector('input[name="gcx-exptype"]:checked');
+    return r?r.value:'trk';
+  }
+  function buildGpx(){
+    var name=gescape(nameInput.value.trim()||'Route');
+    var time=new Date().toISOString();
+    var type=expType();
+    var tag=type==='trk'?'trkpt':'rtept';
+    var g=fullGeom();
+    var indent=type==='trk'?'      ':'    ';
+    var pts=g.map(function(p){
+      return indent+'<'+tag+' lat="'+p.lat.toFixed(6)+'" lon="'+p.lng.toFixed(6)+'"></'+tag+'>';
+    }).join('\n');
+    var core=type==='trk'
+      ?'  <trk>\n    <name>'+name+'</name>\n    <trkseg>\n'+pts+'\n    </trkseg>\n  </trk>'
+      :'  <rte>\n    <name>'+name+'</name>\n'+pts+'\n  </rte>';
+    return '<?xml version="1.0" encoding="UTF-8"?>\n'
+      +'<gpx version="1.1" creator="Trailhead GPX Creator" xmlns="http://www.topografix.com/GPX/1/1" '
+      +'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '
+      +'xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">\n'
+      +'  <metadata>\n    <name>'+name+'</name>\n    <time>'+time+'</time>\n  </metadata>\n'
+      +core+'\n</gpx>\n';
+  }
+  function slug(s){
+    return (s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''))||'route';
+  }
+
+  btnDownload.addEventListener('click',function(){
+    if(waypoints.length<2) return;
+    var gpx=buildGpx();
+    var blob=new Blob([gpx],{type:'application/gpx+xml'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=slug(nameInput.value)+'.gpx';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function(){URL.revokeObjectURL(a.href)},1500);
+    gtoast('GPX gedownload \u2014 '+fullGeom().length+' trackpunten');
+  });
+
+  btnPreview.addEventListener('click',function(){
+    if(previewWrap.hidden){
+      gpxText.value=buildGpx();
+      previewWrap.hidden=false;
+      btnPreview.textContent='Verberg code';
+    }else{
+      previewWrap.hidden=true;
+      btnPreview.textContent='Toon code';
+    }
+  });
+  document.querySelectorAll('input[name="gcx-exptype"]').forEach(function(r){
+    r.addEventListener('change',function(){
+      if(!previewWrap.hidden&&waypoints.length>=2) gpxText.value=buildGpx();
+    });
+  });
+  nameInput.addEventListener('input',function(){
+    if(!previewWrap.hidden&&waypoints.length>=2) gpxText.value=buildGpx();
+  });
+
+  btnCopy.addEventListener('click',function(){
+    var done=function(){gtoast('GPX gekopieerd naar klembord')};
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(gpxText.value).then(done).catch(function(){
+        gpxText.select();document.execCommand('copy');done();
+      });
+    }else{
+      gpxText.select();document.execCommand('copy');done();
+    }
+  });
+
+  /* ── GPX import ── */
+  btnImport.addEventListener('click',function(){fileInput.click()});
+  fileInput.addEventListener('change',function(){
+    var f=fileInput.files&&fileInput.files[0];
+    if(!f) return;
+    var reader=new FileReader();
+    reader.onload=function(){
+      try{
+        var dom=new DOMParser().parseFromString(reader.result,'application/xml');
+        if(dom.querySelector('parsererror')) throw new Error('parse');
+        var nodes=dom.getElementsByTagName('trkpt');
+        if(!nodes.length) nodes=dom.getElementsByTagName('rtept');
+        if(!nodes.length) nodes=dom.getElementsByTagName('wpt');
+        if(!nodes.length){gtoast('Geen punten gevonden in dit GPX-bestand');return;}
+        var raw=[];
+        for(var i=0;i<nodes.length;i++){
+          var lat=parseFloat(nodes[i].getAttribute('lat')),
+              lon=parseFloat(nodes[i].getAttribute('lon'));
+          if(isFinite(lat)&&isFinite(lon)) raw.push(L.latLng(lat,lon));
+        }
+        if(!raw.length){gtoast('Geen bruikbare co\u00f6rdinaten gevonden');return;}
+        var simplified=false;
+        if(raw.length>400){
+          var step=Math.ceil(raw.length/400),keep=[];
+          for(var k=0;k<raw.length;k+=step) keep.push(raw[k]);
+          if(keep[keep.length-1]!==raw[raw.length-1]) keep.push(raw[raw.length-1]);
+          raw=keep;simplified=true;
+        }
+        clearAll();
+        for(var j=0;j<raw.length;j++){
+          waypoints.push(raw[j]);
+          markers.push(createMarker(raw[j]));
+          if(j>0){
+            var leg=blankLeg();
+            leg.geom=[raw[j-1],raw[j]];
+            leg.dist=raw[j-1].distanceTo(raw[j]);
+            legs.push(leg);
+          }
+        }
+        refresh();
+        var nm=dom.querySelector('trk name, rte name, metadata name');
+        if(nm&&nm.textContent.trim()) nameInput.value=nm.textContent.trim().slice(0,80);
+        if(waypoints.length>=2){
+          map.fitBounds(L.latLngBounds(waypoints),{padding:[50,50],maxZoom:16});
+        }else{
+          map.setView(waypoints[0],15);
+        }
+        gtoast(simplified
+          ?'Route geladen en vereenvoudigd tot '+waypoints.length+' punten'
+          :'Route geladen \u2014 '+waypoints.length+' punten');
+      }catch(err){
+        gtoast('Dit bestand kon niet gelezen worden als GPX');
+      }
+      fileInput.value='';
+    };
+    reader.readAsText(f);
+  });
+
+  refresh();
+  setTimeout(function(){map.invalidateSize();},200);
+  setTimeout(function(){map.invalidateSize();},500);
+
+  gcxApi={
+    fullGeom:fullGeom,
+    totalDist:totalDist,
+    getName:function(){return nameInput.value;},
+    invalidate:function(){try{map.invalidateSize();}catch(e){}}
+  };
+}
 
 /* MOBILE NAV */
 function toggleDrawer(){
@@ -4000,6 +4700,10 @@ function sv(n){
   closeDrawer();
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+n).classList.add('active');
+  // Highlight active nav button
+  document.querySelectorAll('.nav-desktop .btn-ghost[data-nav], .nav-drawer .btn[data-nav]').forEach(b=>{
+    b.classList.toggle('nav-active', b.getAttribute('data-nav')===n);
+  });
   // Fix any map sizes after the view becomes visible
   requestAnimationFrame(()=>{invalidateAllMaps();setTimeout(invalidateAllMaps,200);setTimeout(invalidateAllMaps,500);});
   // Update URL hash based on view
@@ -4931,6 +5635,115 @@ if(typeof L!=="undefined"){boot().then(initRouting);}else{window.addEventListene
     <div id="fs-elev-tracks"></div>
   </div>
 </div>
+<!-- GPX ROUTE CREATOR OVERLAY -->
+<div id="gcx-overlay">
+  <div id="gcx-header">
+    <span class="gcx-htitle">✏️ <span data-i18n="gcx_title">Route tekenen</span></span>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="gcxUseInPost()">✓ <span data-i18n="gcx_use">Gebruik in post</span></button>
+      <button class="btn" onclick="closeGpxCreator()">✕ <span data-i18n="gcx_close">Sluiten</span></button>
+    </div>
+  </div>
+  <div id="gcx-body">
+    <div id="gcx-map"></div>
+
+    <div class="gcx-panel" id="gcx-panel">
+      <div class="gcx-p-head">
+        <div>
+          <div class="gcx-p-eyebrow">Routeontwerp · GPX 1.1</div>
+          <h1 class="gcx-p-title">GPX Route Creator</h1>
+        </div>
+        <button class="gcx-collapse" id="gcx-collapseBtn" title="Paneel in-/uitklappen" aria-label="Paneel in-/uitklappen">&#8722;</button>
+      </div>
+
+      <div class="gcx-p-body">
+        <section>
+          <label class="gcx-lbl" for="gcx-routeName" data-i18n="gcx_name">Routenaam</label>
+          <input class="gcx-name-input" id="gcx-routeName" type="text" value="Mijn route" maxlength="80" autocomplete="off">
+        </section>
+
+        <section>
+          <span class="gcx-lbl" data-i18n="gcx_mode">Tekenmodus</span>
+          <div class="gcx-seg" role="radiogroup" aria-label="Tekenmodus">
+            <label><input type="radio" name="gcx-drawmode" value="free" checked><span data-i18n="gcx_free">Vrije lijn</span></label>
+            <label><input type="radio" name="gcx-drawmode" value="road"><span data-i18n="gcx_road">Volg wegen</span></label>
+          </div>
+          <div id="gcx-profileRow" style="margin-top:8px" hidden>
+            <div class="gcx-seg" role="radiogroup" aria-label="Routeprofiel">
+              <label><input type="radio" name="gcx-profile" value="bike" checked><span data-i18n="gcx_bike">Fiets</span></label>
+              <label><input type="radio" name="gcx-profile" value="foot"><span data-i18n="gcx_foot">Te voet</span></label>
+              <label><input type="radio" name="gcx-profile" value="car"><span data-i18n="gcx_car">Auto</span></label>
+            </div>
+          </div>
+          <div class="gcx-btnrow" style="margin-top:8px">
+            <button class="gcx-btn" id="gcx-btnApply" disabled title="Herbereken alle bestaande segmenten in de actieve modus" data-i18n="gcx_apply">Pas toe op hele route</button>
+          </div>
+          <div class="gcx-status" id="gcx-routeStatus" hidden>Wegen worden berekend&#8230;</div>
+        </section>
+
+        <section class="gcx-stats" style="padding:0">
+          <div class="gcx-cell">
+            <span class="gcx-lbl" style="margin-bottom:0" data-i18n="gcx_pts">Punten</span>
+            <div class="gcx-stat-val" id="gcx-statPts">0</div>
+          </div>
+          <div class="gcx-cell">
+            <span class="gcx-lbl" style="margin-bottom:0" data-i18n="gcx_dist">Afstand</span>
+            <div class="gcx-stat-val" id="gcx-statDist">&#8212;</div>
+          </div>
+        </section>
+
+        <section>
+          <div class="gcx-btnrow">
+            <button class="gcx-btn" id="gcx-btnUndo" disabled title="Laatste punt verwijderen (Ctrl+Z of rechtsklik op kaart)">&#8630; <span data-i18n="gcx_undo">Ongedaan</span></button>
+            <button class="gcx-btn" id="gcx-btnClear" disabled>Wis alles</button>
+          </div>
+        </section>
+
+        <section>
+          <span class="gcx-lbl" data-i18n="gcx_export">Exporteren als</span>
+          <div class="gcx-seg" role="radiogroup" aria-label="Exporttype">
+            <label><input type="radio" name="gcx-exptype" value="trk" checked><span>Track</span></label>
+            <label><input type="radio" name="gcx-exptype" value="rte"><span>Route</span></label>
+          </div>
+          <div class="gcx-btnrow" style="margin-top:8px">
+            <button class="gcx-btn primary" id="gcx-btnDownload" disabled data-i18n="gcx_download">Download GPX</button>
+            <button class="gcx-btn" id="gcx-btnPreview" disabled>Toon code</button>
+          </div>
+          <div class="gcx-btnrow" style="margin-top:8px">
+            <button class="gcx-btn" id="gcx-btnImport" data-i18n="gcx_import">GPX importeren&#8230;</button>
+          </div>
+        </section>
+
+        <section class="gcx-preview" id="gcx-previewWrap" hidden>
+          <span class="gcx-lbl">GPX-code</span>
+          <textarea id="gcx-gpxText" readonly spellcheck="false"></textarea>
+          <div class="gcx-btnrow">
+            <button class="gcx-btn" id="gcx-btnCopy" data-i18n="gcx_copy">Kopieer naar klembord</button>
+          </div>
+        </section>
+
+        <section>
+          <span class="gcx-lbl" data-i18n="gcx_help">Bediening</span>
+          <p class="gcx-tips" data-i18n="gcx_tips">Klik op de kaart om een punt te plaatsen. Sleep een punt om het te verplaatsen. Klik op de lijn om een segment te selecteren; klik daarna waar de route moet passeren. Klik op een punt om het te verwijderen. Rechtsklik of Ctrl+Z maakt het laatste punt ongedaan. Gestippeld = vrije lijn, vol = volgt de weg.</p>
+        </section>
+      </div>
+
+      <div class="gcx-p-foot">
+        <span id="gcx-coordRead">&#8212;</span>
+        <span>EPSG:4326 &#183; WGS&nbsp;84</span>
+      </div>
+    </div>
+
+    <div class="gcx-chip" id="gcx-emptyChip" data-i18n="gcx_chip">Klik op de kaart om je eerste punt te plaatsen</div>
+    <div class="gcx-selbar" id="gcx-selBar" hidden>
+      <span id="gcx-selText"></span>
+      <button id="gcx-selCancel" title="Selectie annuleren (Esc)" aria-label="Selectie annuleren">&#215;</button>
+    </div>
+    <div class="gcx-toast" id="gcx-toast" role="status"></div>
+    <input type="file" id="gcx-fileInput" accept=".gpx,application/gpx+xml" hidden>
+  </div>
+</div>
+
 <!-- AUTH OVERLAY -->
 <div id="auth-overlay">
   <div style="font-family:'Playfair Display',serif;font-size:32px;color:#f0e8dc;display:flex;align-items:center;gap:12px">

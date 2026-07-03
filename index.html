@@ -986,6 +986,7 @@ body:not(.readonly) .logout-btn{display:flex}
   <div class="nav-desktop" style="display:flex;gap:8px;align-items:center">
     <button class="btn btn-ghost" data-nav="feed" onclick="sv('feed')">📋 <span data-i18n="nav_posts">Posts</span></button>
     <button class="btn btn-ghost" data-nav="vacations" onclick="sv('vacations')">🏖 <span data-i18n="nav_vacations">Vakanties</span></button>
+    <button class="btn btn-ghost" onclick="openGpxCreator(true)">🗺 <span data-i18n="nav_routemaker">Route maken</span></button>
     <button class="btn btn-primary edit-only" onclick="showEd()">+ <span data-i18n="nav_newpost">Nieuwe post</span></button>
     <button class="btn btn-ghost login-btn" onclick="showLogin()">🔒 <span data-i18n="nav_login">Inloggen</span></button>
     <button class="btn btn-ghost logout-btn edit-only" onclick="syncAllToSupabase()" title="Synchroniseer met cloud">☁</button>
@@ -1012,6 +1013,7 @@ body:not(.readonly) .logout-btn{display:flex}
 <div class="nav-drawer" id="nav-drawer">
   <button class="btn" data-nav="feed" onclick="sv('feed');closeDrawer()"><span data-i18n="nav_posts">Posts</span></button>
   <button class="btn" data-nav="vacations" onclick="sv('vacations');closeDrawer()"><span data-i18n="nav_vacations">Vakanties</span></button>
+  <button class="btn" onclick="openGpxCreator(true);closeDrawer()">🗺 <span data-i18n="nav_routemaker">Route maken</span></button>
   <button class="btn btn-primary edit-only" onclick="showEd();closeDrawer()"><span data-i18n="nav_newpost">Nieuwe post</span></button>
   <div class="lang-switch" style="margin:6px 0;justify-content:center">
     <button class="lang-btn" data-lang="nl" onclick="setLang('nl')">NL</button>
@@ -1334,7 +1336,7 @@ const LANG_FLAGS = {nl:'🇳🇱', fr:'🇫🇷', en:'🇬🇧'};
 
 const I18N = {
   nl:{
-    nav_posts:'Posts', nav_vacations:'Vakanties', nav_newpost:'Nieuwe post', nav_login:'Inloggen', nav_back_feed:'Terug naar overzicht',
+    nav_posts:'Posts', nav_vacations:'Vakanties', nav_newpost:'Nieuwe post', nav_login:'Inloggen', nav_back_feed:'Terug naar overzicht', nav_routemaker:'Route maken',
     tab_posts:'Posts', tab_planned:'Geplande activiteiten', tab_map:'Kaart', tab_story:'Verhaal',
     ed_title_label:'Titel', ed_title_ph:'Geef je avontuur een naam…',
     ed_story_label:'Verhaal', ed_story_ph:'Schrijf over je avontuur…',
@@ -1354,7 +1356,7 @@ const I18N = {
     gcx_open:'Route tekenen op kaart', gcx_title:'Route tekenen', gcx_use:'Gebruik in post', gcx_close:'Sluiten', gcx_name:'Routenaam', gcx_mode:'Tekenmodus', gcx_free:'Vrije lijn', gcx_road:'Volg wegen', gcx_bike:'Fiets', gcx_foot:'Te voet', gcx_car:'Auto', gcx_apply:'Pas toe op hele route', gcx_pts:'Punten', gcx_dist:'Afstand', gcx_undo:'Ongedaan', gcx_export:'Exporteren als', gcx_download:'Download GPX', gcx_import:'GPX importeren…', gcx_copy:'Kopieer naar klembord', gcx_help:'Bediening', gcx_chip:'Klik op de kaart om je eerste punt te plaatsen', gcx_tips:'Klik op de kaart om een punt te plaatsen. Sleep een punt om het te verplaatsen. Klik op de lijn om een segment te selecteren; klik daarna waar de route moet passeren. Klik op een punt om het te verwijderen. Rechtsklik of Ctrl+Z maakt het laatste punt ongedaan. Gestippeld = vrije lijn, vol = volgt de weg.'
   },
   fr:{
-    nav_posts:'Articles', nav_vacations:'Vacances', nav_newpost:'Nouvel article', nav_login:'Connexion', nav_back_feed:'Retour à l\'accueil',
+    nav_posts:'Articles', nav_vacations:'Vacances', nav_newpost:'Nouvel article', nav_login:'Connexion', nav_back_feed:'Retour à l\'accueil', nav_routemaker:'Créer un itinéraire',
     tab_posts:'Articles', tab_planned:'Activités prévues', tab_map:'Carte', tab_story:'Récit',
     ed_title_label:'Titre', ed_title_ph:'Donnez un nom à votre aventure…',
     ed_story_label:'Récit', ed_story_ph:'Racontez votre aventure…',
@@ -1374,7 +1376,7 @@ const I18N = {
     gcx_open:'Tracer un itinéraire sur la carte', gcx_title:'Tracer un itinéraire', gcx_use:'Utiliser dans l\'article', gcx_close:'Fermer', gcx_name:'Nom de l\'itinéraire', gcx_mode:'Mode de tracé', gcx_free:'Ligne libre', gcx_road:'Suivre les routes', gcx_bike:'Vélo', gcx_foot:'À pied', gcx_car:'Voiture', gcx_apply:'Appliquer à tout l\'itinéraire', gcx_pts:'Points', gcx_dist:'Distance', gcx_undo:'Annuler', gcx_export:'Exporter comme', gcx_download:'Télécharger GPX', gcx_import:'Importer GPX…', gcx_copy:'Copier dans le presse-papiers', gcx_help:'Commandes', gcx_chip:'Cliquez sur la carte pour placer votre premier point', gcx_tips:'Cliquez sur la carte pour placer un point. Faites glisser un point pour le déplacer. Cliquez sur la ligne pour sélectionner un segment ; cliquez ensuite là où l\'itinéraire doit passer. Cliquez sur un point pour le supprimer. Clic droit ou Ctrl+Z annule le dernier point. Pointillé = ligne libre, plein = suit la route.'
   },
   en:{
-    nav_posts:'Posts', nav_vacations:'Vacations', nav_newpost:'New post', nav_login:'Log in', nav_back_feed:'Back to overview',
+    nav_posts:'Posts', nav_vacations:'Vacations', nav_newpost:'New post', nav_login:'Log in', nav_back_feed:'Back to overview', nav_routemaker:'Route planner',
     tab_posts:'Posts', tab_planned:'Planned activities', tab_map:'Map', tab_story:'Story',
     ed_title_label:'Title', ed_title_ph:'Give your adventure a name…',
     ed_story_label:'Story', ed_story_ph:'Write about your adventure…',
@@ -2874,11 +2876,14 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElement
 /* ═══ GPX ROUTE CREATOR (geïntegreerd) ═══ */
 let gcxInited=false, gcxApi=null;
 
-function openGpxCreator(){
+function openGpxCreator(standalone){
   const ov=document.getElementById('gcx-overlay');
   ov.classList.add('open');
   document.body.style.overflow='hidden';
-  if(typeof L==='undefined'){setTimeout(openGpxCreator,200);return;}
+  // Hide "Gebruik in post" when opened as a standalone route maker (no post being edited)
+  const useBtn=document.getElementById('gcx-btnUseInPost');
+  if(useBtn) useBtn.style.display = standalone===true ? 'none' : '';
+  if(typeof L==='undefined'){setTimeout(()=>openGpxCreator(standalone),200);return;}
   if(!gcxInited){
     gcxInited=true;
     setTimeout(initGpxCreator,120);
@@ -5640,7 +5645,7 @@ if(typeof L!=="undefined"){boot().then(initRouting);}else{window.addEventListene
   <div id="gcx-header">
     <span class="gcx-htitle">✏️ <span data-i18n="gcx_title">Route tekenen</span></span>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-primary" onclick="gcxUseInPost()">✓ <span data-i18n="gcx_use">Gebruik in post</span></button>
+      <button class="btn btn-primary" id="gcx-btnUseInPost" onclick="gcxUseInPost()">✓ <span data-i18n="gcx_use">Gebruik in post</span></button>
       <button class="btn" onclick="closeGpxCreator()">✕ <span data-i18n="gcx_close">Sluiten</span></button>
     </div>
   </div>
@@ -5743,7 +5748,7 @@ if(typeof L!=="undefined"){boot().then(initRouting);}else{window.addEventListene
     <input type="file" id="gcx-fileInput" accept=".gpx,application/gpx+xml" hidden>
   </div>
 </div>
- 
+
 <!-- AUTH OVERLAY -->
 <div id="auth-overlay">
   <div style="font-family:'Playfair Display',serif;font-size:32px;color:#f0e8dc;display:flex;align-items:center;gap:12px">

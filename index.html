@@ -852,7 +852,7 @@ nav{background:var(--nav-bg);border-bottom:3px solid var(--nav-border);padding:0
 body.readonly .edit-only{display:none!important}
 body.readonly .btn-primary{display:none!important}
 body.readonly .gear-btn{display:none!important}
-body.readonly .hamburger{pointer-events:none}
+/* hamburger stays clickable in readonly — holds public nav */
 /* Show login button in nav when readonly */
 .login-btn{display:none}
 body.readonly .login-btn{display:flex}
@@ -1833,9 +1833,20 @@ function doPrint(pc){
   pc.style.top='';
   pc.style.width='';
   pc.style.visibility='visible';
+  // Clean up only AFTER the print/save dialog closes. On mobile browsers window.print()
+  // does not block JavaScript, so a fixed setTimeout would wipe the content before the
+  // PDF is rendered (→ blank PDF). The 'afterprint' event fires on both desktop and mobile.
+  let cleaned=false;
+  const cleanup=()=>{
+    if(cleaned)return; cleaned=true;
+    pc.style.display='none';
+    pc.innerHTML='';
+    window.removeEventListener('afterprint',cleanup);
+  };
+  window.addEventListener('afterprint',cleanup);
+  // Long safety fallback only if afterprint never fires — kept large so it can never wipe early on mobile
+  setTimeout(cleanup,120000);
   window.print();
-  // Cleanup after print dialog closes
-  setTimeout(()=>{pc.style.display='none';pc.innerHTML=''},500);
 }
 
 // Build a simple SVG elevation chart for print

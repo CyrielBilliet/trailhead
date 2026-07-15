@@ -976,6 +976,46 @@ body:not(.readonly) .logout-btn{display:flex}
 #gcx-overlay .leaflet-control-layers{font:400 12px var(--gxsans)}
 @media(max-width:600px){#gcx-header{padding:8px 10px}.gcx-panel{width:min(300px,calc(100vw - 20px))}}
 
+
+/* ═══════════════════════════════════════
+   HOMEPAGE / LANDING
+═══════════════════════════════════════ */
+#view-home{max-width:1080px;margin:0 auto}
+.home-hero{text-align:center;padding:2.75rem 1rem 1.25rem}
+.home-mark{width:66px;height:66px;margin:0 auto 1.25rem;border-radius:16px;background:var(--nav-bg);display:flex;align-items:center;justify-content:center;box-shadow:0 5px 20px rgba(74,55,40,.28)}
+.home-mark span{color:var(--nav-text);font-size:30px;line-height:1}
+.home-hero h1{font-family:var(--serif);font-size:46px;color:var(--ink);margin-bottom:.4rem;letter-spacing:-.5px}
+.home-tagline{font-family:var(--sans);font-size:16px;color:var(--rust);font-weight:600;margin-bottom:1.5rem;letter-spacing:.2px}
+.home-intro{max-width:640px;margin:0 auto;font-family:var(--body);font-size:16.5px;line-height:1.75;color:var(--muted)}
+.home-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;padding:2.25rem 1rem 3rem}
+.home-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.75rem 1.5rem;display:flex;flex-direction:column;align-items:flex-start;position:relative;overflow:hidden;transition:transform .2s ease,box-shadow .2s ease}
+.home-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px}
+.home-card.c-discover::before{background:var(--moss)}
+.home-card.c-create::before{background:var(--rust)}
+.home-card.c-map::before{background:var(--blue)}
+.home-card:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(28,20,16,.13)}
+.hc-icon{width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:1rem}
+.c-discover .hc-icon{background:var(--moss-bg)}
+.c-create .hc-icon{background:var(--rust-bg)}
+.c-map .hc-icon{background:var(--blue-bg)}
+.home-card h3{font-family:var(--serif);font-size:22px;color:var(--ink);margin-bottom:.5rem}
+.home-card p{font-family:var(--body);font-size:14.5px;line-height:1.6;color:var(--muted);margin-bottom:1.25rem;flex:1}
+.hc-actions{display:flex;flex-wrap:wrap;gap:.5rem;width:100%}
+.home-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 16px;border-radius:var(--radius);font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;border:1px solid;transition:filter .15s,transform .1s;flex:1 1 auto;white-space:nowrap}
+.home-btn:active{transform:scale(.98)}
+.home-btn:hover{filter:brightness(1.06)}
+.hb-moss{background:var(--moss);color:#fff;border-color:var(--moss2)}
+.hb-rust{background:var(--rust);color:#fff;border-color:var(--rust2)}
+.hb-blue{background:var(--blue);color:#fff;border-color:var(--blue2)}
+.hb-ghost{background:transparent;color:var(--rust);border-color:var(--border2)}
+@media(max-width:820px){
+  .home-cards{grid-template-columns:1fr;gap:1rem;padding:1.5rem 1rem 2.5rem}
+  .home-hero{padding:1.75rem 1rem 1rem}
+  .home-hero h1{font-size:34px}
+  .home-tagline{font-size:14.5px;margin-bottom:1.25rem}
+  .home-intro{font-size:15.5px}
+  .home-card{padding:1.5rem 1.25rem}
+}
 </style>
 </head>
 <body class="readonly">
@@ -983,7 +1023,7 @@ body:not(.readonly) .logout-btn{display:flex}
 <!-- Print content (hidden except during print) -->
 <div id="print-content" style="display:none"></div>
 <nav>
-  <div class="logo" onclick="sv('feed')" style="cursor:pointer" title="Terug naar home"><div class="logo-icon"><div class="logo-inner">▲</div></div>Trail<span>head</span></div>
+  <div class="logo" onclick="sv('home')" style="cursor:pointer" title="Home"><div class="logo-icon"><div class="logo-inner">▲</div></div>Trail<span>head</span></div>
   <!-- Desktop nav -->
   <div class="nav-desktop" style="display:flex;gap:8px;align-items:center">
     <button class="btn btn-ghost" data-nav="feed" onclick="sv('feed')">📋 <span data-i18n="nav_posts">Posts</span></button>
@@ -1033,7 +1073,42 @@ body:not(.readonly) .logout-btn{display:flex}
 <div class="nav-drawer-overlay" id="nav-overlay" onclick="closeDrawer()"></div>
 <!-- Print content (hidden except during print) -->
 <div id="print-content" style="display:none"></div>
-<div id="view-feed" class="view active">
+<div id="view-home" class="view active">
+  <div class="home-hero">
+    <div class="home-mark"><span>▲</span></div>
+    <h1>Trailhead</h1>
+    <div class="home-tagline" data-i18n="home_tagline">Fietsavonturen, routes en verhalen uit Vlaanderen en daarbuiten</div>
+    <p class="home-intro" data-i18n="home_intro">Welkom op Trailhead — mijn digitale dagboek voor fietsavonturen. Hier verzamel ik routes, verhalen en foto's van tochten door België, Frankrijk en verder weg: van korte gravelritten in de buurt tot meerdaagse bikepacking-reizen. Bij elke rit vind je de volledige route om zelf na te fietsen, samen met de plekken onderweg die de moeite waard zijn. Het doel is simpel: de mooiste hoekjes van de streek delen en andere fietsers inspireren om zelf op pad te gaan.</p>
+  </div>
+  <div class="home-cards">
+    <div class="home-card c-discover">
+      <div class="hc-icon">🧭</div>
+      <h3 data-i18n="home_c1_title">Ontdek avonturen</h3>
+      <p data-i18n="home_c1_desc">Blader door alle ritten, verhalen en meerdaagse reizen die ik tot nu toe heb vastgelegd.</p>
+      <div class="hc-actions">
+        <button class="home-btn hb-moss" onclick="goDiscover()"><span data-i18n="home_c1_cta">Bekijk posts &amp; reizen</span></button>
+      </div>
+    </div>
+    <div class="home-card c-create">
+      <div class="hc-icon">✏️</div>
+      <h3 data-i18n="home_c2_title">Nieuw avontuur</h3>
+      <p data-i18n="home_c2_desc">Teken zelf een nieuwe route op de kaart, of leg een rit vast in een nieuwe post.</p>
+      <div class="hc-actions">
+        <button class="home-btn hb-rust" onclick="openGpxCreator(true)">🗺 <span data-i18n="nav_routemaker">Route maken</span></button>
+        <button class="home-btn hb-ghost" onclick="showEd()">+ <span data-i18n="nav_newpost">Nieuwe post</span></button>
+      </div>
+    </div>
+    <div class="home-card c-map">
+      <div class="hc-icon">📍</div>
+      <h3 data-i18n="home_c3_title">Op de kaart</h3>
+      <p data-i18n="home_c3_desc">Bekijk al mijn routes samen op één interactieve kaart van de streek.</p>
+      <div class="hc-actions">
+        <button class="home-btn hb-blue" onclick="goMap()"><span data-i18n="home_c3_cta">Open de kaart</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="view-feed" class="view">
   <div class="ph"><h2>Adventure Log</h2><p>Your outdoor stories, routes &amp; memories</p></div>
   <div class="fbar" id="fbar"></div>
   <div class="ftabs">
@@ -1341,6 +1416,11 @@ const LANG_FLAGS = {nl:'🇳🇱', fr:'🇫🇷', en:'🇬🇧'};
 const I18N = {
   nl:{
     nav_posts:'Posts', nav_vacations:'Vakanties', nav_newpost:'Nieuwe post', nav_login:'Inloggen', nav_back_feed:'Terug naar overzicht', nav_routemaker:'Route maken', nav_logout:'Uitloggen',
+    home_tagline:'Fietsavonturen, routes en verhalen uit Vlaanderen en daarbuiten',
+    home_intro:'Welkom op Trailhead — mijn digitale dagboek voor fietsavonturen. Hier verzamel ik routes, verhalen en foto\'s van tochten door België, Frankrijk en verder weg: van korte gravelritten in de buurt tot meerdaagse bikepacking-reizen. Bij elke rit vind je de volledige route om zelf na te fietsen, samen met de plekken onderweg die de moeite waard zijn. Het doel is simpel: de mooiste hoekjes van de streek delen en andere fietsers inspireren om zelf op pad te gaan.',
+    home_c1_title:'Ontdek avonturen', home_c1_desc:'Blader door alle ritten, verhalen en meerdaagse reizen die ik tot nu toe heb vastgelegd.', home_c1_cta:'Bekijk posts & reizen',
+    home_c2_title:'Nieuw avontuur', home_c2_desc:'Teken zelf een nieuwe route op de kaart, of leg een rit vast in een nieuwe post.',
+    home_c3_title:'Op de kaart', home_c3_desc:'Bekijk al mijn routes samen op één interactieve kaart van de streek.', home_c3_cta:'Open de kaart',
     tab_posts:'Posts', tab_planned:'Geplande activiteiten', tab_map:'Kaart', tab_story:'Verhaal',
     ed_title_label:'Titel', ed_title_ph:'Geef je avontuur een naam…',
     ed_story_label:'Verhaal', ed_story_ph:'Schrijf over je avontuur…',
@@ -1361,6 +1441,11 @@ const I18N = {
   },
   fr:{
     nav_posts:'Articles', nav_vacations:'Vacances', nav_newpost:'Nouvel article', nav_login:'Connexion', nav_back_feed:'Retour à l\'accueil', nav_routemaker:'Créer un itinéraire', nav_logout:'Déconnexion',
+    home_tagline:'Aventures à vélo, itinéraires et récits de Flandre et d\'ailleurs',
+    home_intro:'Bienvenue sur Trailhead — mon journal des aventures à vélo. Je rassemble ici des itinéraires, des récits et des photos de sorties à travers la Belgique, la France et au-delà : des courtes boucles gravel près de chez moi aux voyages bikepacking de plusieurs jours. Chaque sortie inclut l\'itinéraire complet à refaire soi-même, ainsi que les endroits qui valent le détour en chemin. L\'objectif est simple : partager les plus beaux coins de la région et inspirer d\'autres cyclistes à prendre la route.',
+    home_c1_title:'Découvrir les aventures', home_c1_desc:'Parcourez toutes les sorties, récits et voyages de plusieurs jours réalisés jusqu\'ici.', home_c1_cta:'Voir les articles & voyages',
+    home_c2_title:'Nouvelle aventure', home_c2_desc:'Tracez vous-même un nouvel itinéraire sur la carte, ou consignez une sortie dans un nouvel article.',
+    home_c3_title:'Sur la carte', home_c3_desc:'Découvrez tous mes itinéraires réunis sur une carte interactive de la région.', home_c3_cta:'Ouvrir la carte',
     tab_posts:'Articles', tab_planned:'Activités prévues', tab_map:'Carte', tab_story:'Récit',
     ed_title_label:'Titre', ed_title_ph:'Donnez un nom à votre aventure…',
     ed_story_label:'Récit', ed_story_ph:'Racontez votre aventure…',
@@ -1381,6 +1466,11 @@ const I18N = {
   },
   en:{
     nav_posts:'Posts', nav_vacations:'Vacations', nav_newpost:'New post', nav_login:'Log in', nav_back_feed:'Back to overview', nav_routemaker:'Route planner', nav_logout:'Log out',
+    home_tagline:'Cycling adventures, routes and stories from Flanders and beyond',
+    home_intro:'Welcome to Trailhead — my digital journal of cycling adventures. Here I collect routes, stories and photos from rides across Belgium, France and further afield: from short gravel loops close to home to multi-day bikepacking trips. Every ride comes with the full route to follow yourself, along with the places worth stopping for along the way. The goal is simple: to share the finest corners of the region and inspire other cyclists to head out themselves.',
+    home_c1_title:'Discover adventures', home_c1_desc:'Browse all the rides, stories and multi-day trips I\'ve logged so far.', home_c1_cta:'View posts & trips',
+    home_c2_title:'New adventure', home_c2_desc:'Draw a new route on the map yourself, or capture a ride in a new post.',
+    home_c3_title:'On the map', home_c3_desc:'See all my routes together on one interactive map of the region.', home_c3_cta:'Open the map',
     tab_posts:'Posts', tab_planned:'Planned activities', tab_map:'Map', tab_story:'Story',
     ed_title_label:'Title', ed_title_ph:'Give your adventure a name…',
     ed_story_label:'Story', ed_story_ph:'Write about your adventure…',
@@ -2705,6 +2795,9 @@ function restoreMapSize(){
   setPmapSize(ms, true);
   setSbMapSize(ms, true);
 }
+
+function goDiscover(){ sv('feed'); sft('list'); }
+function goMap(){ sv('feed'); setTimeout(()=>sft('map'),60); }
 
 function setPmapSize(size, skipSave){
   const el=document.getElementById('pmap');
@@ -4356,10 +4449,14 @@ function handleHashChange(){
 
 function initRouting(){
   window.addEventListener('popstate', handleHashChange);
-  // Handle initial hash on load
+  // Handle initial hash on load. Empty/unknown hash → homepage (default active).
   const route=parseHash();
   if(route.type==='post'&&posts.find(x=>x.id===route.id)){
     vp(route.id);
+  } else if(location.hash.startsWith('#/feed')){
+    sv('feed');
+  } else if(route.type==='vacations'){
+    sv('vacations');
   }
 }
 
@@ -4741,6 +4838,7 @@ function sv(n){
   requestAnimationFrame(()=>{invalidateAllMaps();setTimeout(invalidateAllMaps,200);setTimeout(invalidateAllMaps,500);});
   // Update URL hash based on view
   if(n==='feed'&&location.hash&&!location.hash.startsWith('#/feed')) history.pushState(null,'','#/feed');
+  if(n==='home'){ document.title='Trailhead'; if(location.hash) history.pushState(null,'','#'); }
   if(n==='feed'){
     document.title='Trailhead';
     document.getElementById('og-title')?.setAttribute('content','Trailhead — Adventure Log');

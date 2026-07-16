@@ -2414,7 +2414,7 @@ function addPoiMarkerToMap(map,poi,num,isEditor){
     iconSize:[34,34],iconAnchor:[17,17],popupAnchor:[0,-20],className:''
   });
   const emoji=POI_EMOJI[poi.type]||'📍';
-  const popupPhoto=photo?`<img src="${photo.src}" onclick="olb('${photo.src}','')" style="width:100%;height:100px;object-fit:cover;border-radius:5px;display:block;cursor:pointer;margin-bottom:5px">`:'';
+  const popupPhoto=photo?`<img src="${photo.src}" onclick="olb('${jsAttr(photo.src)}','')" style="width:100%;height:100px;object-fit:cover;border-radius:5px;display:block;cursor:pointer;margin-bottom:5px">`:'';
   const popup=`<div style="font-family:var(--sans);font-size:13px;min-width:150px">
     ${popupPhoto}
     <div style="font-weight:600;margin-bottom:3px">${emoji} ${esc(L18(poi.name)||'Punt '+num)}</div>
@@ -3061,7 +3061,7 @@ fsPl.on('mouseout',()=>{
         const ph=p.photos[parseInt(idx)];if(!ph)return;
         const cap=L18(ph.caption)||'';
         const icon=L.divIcon({html:`<div style="width:40px;height:40px;border-radius:50%;background:#222;border:3px solid #7aaa50;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.5)"><img src="${ph.src}" style="width:100%;height:100%;object-fit:cover;display:block"></div>`,iconSize:[44,44],iconAnchor:[22,22],popupAnchor:[0,-28],className:''});
-        L.marker([latlng.lat,latlng.lng],{icon}).addTo(fsMap).bindPopup(`<div class="ppop"><img src="${ph.src}" onclick="olb('${ph.src}','${esc(cap)}')">${cap?`<div class="ppop-cap">${esc(cap)}</div>`:''}<button onclick="olb('${ph.src}','${esc(cap)}')" style="width:100%;padding:5px 8px;background:var(--moss);color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-family:var(--sans);margin-top:6px">🔍 Volledig scherm</button></div>`,{maxWidth:240});
+        L.marker([latlng.lat,latlng.lng],{icon}).addTo(fsMap).bindPopup(`<div class="ppop"><img src="${ph.src}" onclick="olb('${jsAttr(ph.src)}','${jsAttr(cap)}')">${cap?`<div class="ppop-cap">${esc(cap)}</div>`:''}<button onclick="olb('${jsAttr(ph.src)}','${jsAttr(cap)}')" style="width:100%;padding:5px 8px;background:var(--moss);color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-family:var(--sans);margin-top:6px">🔍 Volledig scherm</button></div>`,{maxWidth:240});
       });
     }
     // Add connection coords to bounds
@@ -3937,7 +3937,7 @@ function initPostSidebar(p){
         if(poiLinkedPhotos.has(parseInt(idx)))return;      const ph=p.photos[parseInt(idx)];if(!ph)return;
       const icon=L.divIcon({html:`<div style="width:28px;height:28px;border-radius:50%;background:#222;border:2px solid #7aaa50;overflow:hidden;box-shadow:0 1px 5px rgba(0,0,0,.4)"><img src="${ph.src}" style="width:100%;height:100%;object-fit:cover;display:block"></div>`,iconSize:[36,36],iconAnchor:[18,18],popupAnchor:[0,-22],className:''});
       L.marker([latlng.lat,latlng.lng],{icon}).addTo(sidebarMap)
-        .bindPopup(`<div style="min-width:160px"><img src="${ph.src}" onclick="olb('${ph.src}','${esc(L18(ph.caption)||'')}')" style="width:100%;height:110px;object-fit:cover;border-radius:4px;display:block;cursor:pointer;margin-bottom:4px">${L18(ph.caption)?`<div style="font-size:11px;font-style:italic;color:#666;margin-top:4px">${esc(L18(ph.caption))}</div>`:''}<button onclick="olb('${ph.src}','${esc(L18(ph.caption)||'')}')" style="width:100%;padding:4px;background:var(--moss);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--sans);margin-top:5px">🔍 Vergroot</button></div>`,{maxWidth:180});
+        .bindPopup(`<div style="min-width:160px"><img src="${ph.src}" onclick="olb('${jsAttr(ph.src)}','${jsAttr(L18(ph.caption)||'')}')" style="width:100%;height:110px;object-fit:cover;border-radius:4px;display:block;cursor:pointer;margin-bottom:4px">${L18(ph.caption)?`<div style="font-size:11px;font-style:italic;color:#666;margin-top:4px">${esc(L18(ph.caption))}</div>`:''}<button onclick="olb('${jsAttr(ph.src)}','${jsAttr(L18(ph.caption)||'')}')" style="width:100%;padding:4px;background:var(--moss);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--sans);margin-top:5px">🔍 Vergroot</button></div>`,{maxWidth:180});
     });
   }
 
@@ -5661,7 +5661,7 @@ async function vp(id){
       }
     })},80);
   }else es.style.display='none';
-  const ps2=document.getElementById('pvps');if(p.photos&&p.photos.length){ps2.style.display='block';document.getElementById('pvg').innerHTML=p.photos.map(ph=>`<div class="gi"><img src="${ph.src}" loading="lazy" onclick="olb('${ph.src}','${esc(L18(ph.caption)||'')}')"> ${L18(ph.caption)?`<div class="gc2">${esc(L18(ph.caption))}</div>`:''}</div>`).join('')}else ps2.style.display='none';
+  const ps2=document.getElementById('pvps');if(p.photos&&p.photos.length){ps2.style.display='block';document.getElementById('pvg').innerHTML=p.photos.map(ph=>`<div class="gi"><img src="${ph.src}" loading="lazy" onclick="olb('${jsAttr(ph.src)}','${jsAttr(L18(ph.caption)||'')}')"> ${L18(ph.caption)?`<div class="gc2">${esc(L18(ph.caption))}</div>`:''}</div>`).join('')}else ps2.style.display='none';
   // POI section
   const pvps2=document.getElementById('pvps');
   const pois=p.pois||[];
@@ -5783,7 +5783,7 @@ ab.push(...c);const di=col=>L.divIcon({html:`<div style="background:${col};width
 (p.pois||[]).forEach(poi=>{if(poi.lat!=null&&poi.lng!=null)ab.push([poi.lat,poi.lng])});
 if(ab.length>1)vm.fitBounds(L.latLngBounds(ab),{padding:[24,24]});
 else if(ab.length===1)vm.setView(ab[0],14);
-else vm.setView([50.85,4.35],8);if(p.pins&&p.photos){Object.entries(p.pins).forEach(([idx,latlng])=>{const ph=p.photos[parseInt(idx)];if(!ph)return;const cap=L18(ph.caption)||'';const icon=L.divIcon({html:`<div style="width:40px;height:40px;border-radius:50%;background:#222;border:3px solid #7aaa50;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.5)"><img src="${ph.src}" style="width:100%;height:100%;object-fit:cover;display:block"></div>`,iconSize:[44,44],iconAnchor:[22,22],popupAnchor:[0,-28],className:''});L.marker([latlng.lat,latlng.lng],{icon}).addTo(vm).bindPopup(`<div class="ppop"><img src="${ph.src}" onclick="olb('${ph.src}','${esc(cap)}')">${cap?`<div class="ppop-cap">${esc(cap)}</div>`:''}<button onclick="olb('${ph.src}','${esc(cap)}')" style="width:100%;padding:5px 8px;background:var(--moss);color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-family:var(--sans);margin-top:6px">🔍 Volledig scherm</button></div>`,{maxWidth:240})})}(p.connections||[]).forEach(c=>drawConnOnMap(vm,c));
+else vm.setView([50.85,4.35],8);if(p.pins&&p.photos){Object.entries(p.pins).forEach(([idx,latlng])=>{const ph=p.photos[parseInt(idx)];if(!ph)return;const cap=L18(ph.caption)||'';const icon=L.divIcon({html:`<div style="width:40px;height:40px;border-radius:50%;background:#222;border:3px solid #7aaa50;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.5)"><img src="${ph.src}" style="width:100%;height:100%;object-fit:cover;display:block"></div>`,iconSize:[44,44],iconAnchor:[22,22],popupAnchor:[0,-28],className:''});L.marker([latlng.lat,latlng.lng],{icon}).addTo(vm).bindPopup(`<div class="ppop"><img src="${ph.src}" onclick="olb('${jsAttr(ph.src)}','${jsAttr(cap)}')">${cap?`<div class="ppop-cap">${esc(cap)}</div>`:''}<button onclick="olb('${jsAttr(ph.src)}','${jsAttr(cap)}')" style="width:100%;padding:5px 8px;background:var(--moss);color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-family:var(--sans);margin-top:6px">🔍 Volledig scherm</button></div>`,{maxWidth:240})})}(p.connections||[]).forEach(c=>drawConnOnMap(vm,c));
     (p.pois||[]).forEach((poi,i)=>{poi._photos=p.photos;addPoiMarkerToMap(vm,poi,i+1,false)});
     // Multiple invalidateSize calls to handle container that starts at height 0
     if(vm){
@@ -5842,6 +5842,8 @@ function de2(canvas,elevs,opts){
 function olb(src,cap){document.getElementById('lbi').src=src;document.getElementById('lbc').textContent=cap||'';document.getElementById('lb').classList.add('open')}
 function clb(){document.getElementById('lb').classList.remove('open')}
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+// Safely embed a string inside a single-quoted JS string within a double-quoted HTML attribute (handles apostrophes, backslashes, quotes)
+function jsAttr(s){return(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\r?\n/g,' ')}
 function fd(ts){return new Date(ts).toLocaleDateString('nl-BE',{day:'numeric',month:'long',year:'numeric'})}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
 window.addEventListener('resize',()=>{if(vm)vm.invalidateSize();if(em)em.invalidateSize();if(om)om.invalidateSize();if(sidebarMap)sidebarMap.invalidateSize();});

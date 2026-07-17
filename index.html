@@ -795,7 +795,7 @@ nav{background:var(--nav-bg);border-bottom:3px solid var(--nav-border);padding:0
 /* ═══════════════════════════════════════
    VAKANTIES
 ═══════════════════════════════════════ */
-.vac-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.25rem;margin-bottom:2rem}
+.vac-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.25rem;margin-bottom:2rem;align-items:start}
 .vac-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:box-shadow .2s,transform .15s;position:relative}
 .vac-card:hover{box-shadow:0 6px 24px rgba(0,0,0,.15);transform:translateY(-2px)}
 .vac-card-banner{width:100%;height:160px;object-fit:cover;display:block}
@@ -4659,7 +4659,7 @@ function renderVacations(){
           ${totalGain>0?`<div class="vac-card-stat">↑${totalGain}m</div>`:''}
         </div>
       </div>
-      <div class="vac-card-actions" onclick="event.stopPropagation()">
+      <div class="vac-card-actions edit-only" onclick="event.stopPropagation()">
         <button class="btn btn-sm edit-only" onclick="editVacation('${v.id}')">✏️</button>
         <button class="btn btn-sm btn-danger edit-only" onclick="deleteVac('${v.id}')">🗑</button>
       </div>
